@@ -1,1 +1,1 @@
-# INFO6205-Final-Project-Blackjack-AI
+# INFO6205-Final-Project-Trisolaran
