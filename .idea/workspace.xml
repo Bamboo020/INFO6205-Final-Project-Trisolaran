@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
-  <component name="AutoImportSettings">
-    <option name="autoReloadType" value="SELECTIVE" />
-  </component>
   <component name="ChangeListManager">
-    <list default="true" id="e098bf66-e0cc-4390-934b-64b5e0adec06" name="更改" comment="" />
+    <list default="true" id="3d6ff67f-aee3-489d-b9e4-9f049b784e51" name="更改" comment="">
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/maze/model/Enemy.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+    </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -17,42 +17,40 @@
       </list>
     </option>
   </component>
-  <component name="ProjectColorInfo">{
-  &quot;associatedIndex&quot;: 3
-}</component>
-  <component name="ProjectId" id="3BdLwTEWAVIxYjNe9ufLdAeXTbn" />
+  <component name="Git.Settings">
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
+  </component>
+  <component name="ProjectColorInfo"><![CDATA[{
+  "customColor": "",
+  "associatedIndex": 3
+}]]></component>
+  <component name="ProjectId" id="3BdpbMzktlCIQxycqgBmpbmEKxI" />
   <component name="ProjectViewState">
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent">{
-  &quot;keyToString&quot;: {
-    &quot;ModuleVcsDetector.initialDetectionPerformed&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
-    &quot;com.intellij.ml.llm.matterhorn.ej.ui.settings.DefaultAutoModeForALLUsers.v1&quot;: &quot;true&quot;,
-    &quot;com.intellij.ml.llm.matterhorn.ej.ui.settings.DefaultModelSelectionForGA.v1&quot;: &quot;true&quot;,
-    &quot;junie.onboarding.icon.badge.shown&quot;: &quot;true&quot;,
-    &quot;kotlin-language-version-configured&quot;: &quot;true&quot;,
-    &quot;last_opened_file_path&quot;: &quot;D:/6205/Final Project/maze-game&quot;,
-    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
-    &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
-    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
-    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
-    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
-    &quot;project.structure.last.edited&quot;: &quot;库&quot;,
-    &quot;project.structure.proportion&quot;: &quot;0.2763672&quot;,
-    &quot;project.structure.side.proportion&quot;: &quot;0.2392473&quot;,
-    &quot;settings.editor.selected.configurable&quot;: &quot;preferences.lookFeel&quot;,
-    &quot;to.speed.mode.migration.done&quot;: &quot;true&quot;,
-    &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;,
-    &quot;应用程序.MazeGameApp.executor&quot;: &quot;Run&quot;,
-    &quot;应用程序.javafx.executor&quot;: &quot;Run&quot;
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "ModuleVcsDetector.initialDetectionPerformed": "true",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "RunOnceActivity.git.unshallow": "true",
+    "com.intellij.ml.llm.matterhorn.ej.ui.settings.DefaultAutoModeForALLUsers.v1": "true",
+    "com.intellij.ml.llm.matterhorn.ej.ui.settings.DefaultModelSelectionForGA.v1": "true",
+    "git-widget-placeholder": "CMQ",
+    "junie.onboarding.icon.badge.shown": "true",
+    "kotlin-language-version-configured": "true",
+    "project.structure.last.edited": "库",
+    "project.structure.proportion": "0.0",
+    "project.structure.side.proportion": "0.2392473",
+    "to.speed.mode.migration.done": "true",
+    "vue.rearranger.settings.migration": "true",
+    "应用程序.javafx.executor": "Run"
   }
-}</component>
+}]]></component>
   <component name="RunManager">
     <configuration name="javafx" type="Application" factoryName="Application">
       <option name="MAIN_CLASS_NAME" value="com.maze.view.MazeGameApp" />
-      <module name="maze-game" />
+      <module name="INFO6205-Final-Project-Trisolaran" />
       <option name="VM_PARAMETERS" value="--module-path &quot;D:\javafx-sdk-25.0.1\lib&quot; --add-modules javafx.controls --enable-native-access=javafx.graphics" />
       <method v="2">
         <option name="Make" enabled="true" />
@@ -69,16 +67,12 @@
   </component>
   <component name="TaskManager">
     <task active="true" id="Default" summary="默认任务">
-      <changelist id="e098bf66-e0cc-4390-934b-64b5e0adec06" name="更改" comment="" />
-      <created>1774814238946</created>
+      <changelist id="3d6ff67f-aee3-489d-b9e4-9f049b784e51" name="更改" comment="" />
+      <created>1774828872145</created>
       <option name="number" value="Default" />
       <option name="presentableId" value="Default" />
-      <updated>1774814238946</updated>
-      <workItem from="1774814240268" duration="239000" />
-      <workItem from="1774814647773" duration="1661000" />
-      <workItem from="1774816480492" duration="24000" />
-      <workItem from="1774816601676" duration="240000" />
-      <workItem from="1774822937736" duration="420000" />
+      <updated>1774828872145</updated>
+      <workItem from="1774828873583" duration="200000" />
     </task>
     <servers />
   </component>
