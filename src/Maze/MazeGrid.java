@@ -115,7 +115,7 @@ public class MazeGrid implements MazeModel {
     // -------- 包级别辅助（供生成器使用）--------
 
     /** 拆除 (r,c) 与 (nr,nc) 之间的墙，并在图中添加边 */
-    void removeWall(int r, int c, int nr, int nc) {
+    public void removeWall(int r, int c, int nr, int nc) {
         int dr = nr - r;
         int dc = nc - c;
         if (dr == 0 && dc == 1)  rightWall[r][c]    = false;

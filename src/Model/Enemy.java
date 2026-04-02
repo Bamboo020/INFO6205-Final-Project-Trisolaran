@@ -3,7 +3,9 @@ package Model;
 import Implementation.LinkedStack;
 import Interface.MazeModel;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Random;
 
 /**
  * Enemy - An AI-controlled entity that patrols the maze and chases the player.

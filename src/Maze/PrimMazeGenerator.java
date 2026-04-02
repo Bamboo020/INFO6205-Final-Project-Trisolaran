@@ -3,8 +3,6 @@ package Maze;
 import Implementation.MinHeap;
 import Interface.MazeGenerator;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Random;
 
 /**

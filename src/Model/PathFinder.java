@@ -86,7 +86,7 @@ public class PathFinder {
     public static Set<String> getReachableWithin(MazeModel maze, int srcRow, int srcCol, int maxSteps) {
         Set<String> reachable = new HashSet<>();
         Queue<int[]> queue = new LinkedList<>();
-        Map<String, Integer> distMap = new java.util.HashMap<>();
+        Map<String, Integer> distMap = new HashMap<>();
 
         String srcKey = srcRow + "," + srcCol;
         queue.add(new int[]{srcRow, srcCol});
