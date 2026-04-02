@@ -1,6 +1,7 @@
 package Maze;
 
 import Implementation.MinHeap;
+import Interface.MazeGenerator;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -11,7 +12,7 @@ import java.util.Random;
  * 随机化 Prim 算法：每次从候选边集合中随机取出一条连接已访问格与未访问格的边
  * 底层使用手写 MinHeap<WeightedEdge>（边权随机赋值实现随机选取）
  */
-public class PrimMazeGenerator {
+public class PrimMazeGenerator implements MazeGenerator {
 
     private final Random random = new Random();
 
@@ -32,6 +33,7 @@ public class PrimMazeGenerator {
         }
     }
 
+    @Override
     public void generate(MazeGrid maze) {
         int rows = maze.getRows();
         int cols = maze.getCols();

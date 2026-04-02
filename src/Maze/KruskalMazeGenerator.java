@@ -3,6 +3,7 @@ package Maze;
 
 import Implementation.MergeSort;
 import Implementation.UnionFind;
+import Interface.MazeGenerator;
 
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -14,7 +15,7 @@ import java.util.Random;
  * 算法：随机化 Kruskal —— 对所有内部边随机赋权，用手写 MergeSort 排序，
  *       再用 UnionFind 选取不成环的边加入生成树（即打通墙壁）
  */
-public class KruskalMazeGenerator {
+public class KruskalMazeGenerator implements MazeGenerator {
 
     private final Random random = new Random();
 
@@ -29,6 +30,7 @@ public class KruskalMazeGenerator {
         }
     }
 
+    @Override
     public void generate(MazeGrid maze) {
         int rows = maze.getRows();
         int cols = maze.getCols();

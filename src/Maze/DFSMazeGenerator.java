@@ -1,6 +1,7 @@
 package Maze;
 
 import Implementation.Stack;
+import Interface.MazeGenerator;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -15,7 +16,7 @@ import java.util.Random;
  *   1. 完美迷宫（任意两格之间有且仅有一条路径）
  *   2. 所有格子均可达
  */
-public class DFSMazeGenerator {
+public class DFSMazeGenerator implements MazeGenerator {
 
     private final Random random = new Random();
 
@@ -23,6 +24,7 @@ public class DFSMazeGenerator {
      * 对给定 MazeGrid 执行迷宫生成
      * 入口固定为左上角 (0, 0)
      */
+    @Override
     public void generate(MazeGrid maze) {
         int rows = maze.getRows();
         int cols = maze.getCols();
