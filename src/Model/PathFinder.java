@@ -1,26 +1,19 @@
 package Model;
 
-import Implementation.Graph;
 import Implementation.HeapPriorityQueue;
+import Interface.MazeModel;
 
 import java.util.*;
 
-/**
- * Pathfinder - Implements Dijkstra's shortest-path algorithm using
- * our custom HeapPriorityQueue ADT.
- * Used for:
- *   - Path hint skill (show shortest path to exit)
- *   - AI enemy pathfinding
- */
-public class Pathfinder {
+public class PathFinder {
 
-    /** Entry in the priority queue for Dijkstra's algorithm. */
     private static class DijkstraEntry implements Comparable<DijkstraEntry> {
-        final String vertex;
+        final int row, col;
         final double distance;
 
-        DijkstraEntry(String vertex, double distance) {
-            this.vertex = vertex;
+        DijkstraEntry(int row, int col, double distance) {
+            this.row = row;
+            this.col = col;
             this.distance = distance;
         }
 
@@ -30,102 +23,118 @@ public class Pathfinder {
         }
     }
 
-    /**
-     * Find the shortest path from source to target using Dijkstra's algorithm.
-     *
-     * @param graph  the maze graph
-     * @param source start vertex key
-     * @param target end vertex key
-     * @return list of vertex keys forming the shortest path, or empty if none
-     */
-    public static List<String> findShortestPath(Graph graph, String source, String target) {
-        // Distance map
-        Map<String, Double> dist = new HashMap<>();
-        // Previous vertex map (for path reconstruction)
-        Map<String, String> prev = new HashMap<>();
-        // Visited set
-        Set<String> visited = new HashSet<>();
+    public static List<int[]> findShortestPath(MazeModel maze, int srcRow, int srcCol,
+                                               int tgtRow, int tgtCol) {
+        int rows = maze.getHeight();
+        int cols = maze.getWidth();
 
-        // Initialize distances to infinity
-        for (String v : graph.getAllVertices()) {
-            dist.put(v, Double.MAX_VALUE);
-        }
-        dist.put(source, 0.0);
+        double[][] dist = new double[rows][cols];
+        for (double[] row : dist) Arrays.fill(row, Double.MAX_VALUE);
+        dist[srcRow][srcCol] = 0.0;
 
-        // Use our custom HeapPriorityQueue ADT
+        int[][] prevRow = new int[rows][cols];
+        int[][] prevCol = new int[rows][cols];
+        for (int[] row : prevRow) Arrays.fill(row, -1);
+        for (int[] row : prevCol) Arrays.fill(row, -1);
+
+        boolean[][] visited = new boolean[rows][cols];
+
         HeapPriorityQueue<DijkstraEntry> pq = new HeapPriorityQueue<>();
-        pq.enqueue(new DijkstraEntry(source, 0.0));
+        pq.enqueue(new DijkstraEntry(srcRow, srcCol, 0.0));
 
         while (!pq.isEmpty()) {
             DijkstraEntry current = pq.dequeue();
-            String u = current.vertex;
+            int r = current.row;
+            int c = current.col;
 
-            if (visited.contains(u)) continue;
-            visited.add(u);
+            if (visited[r][c]) continue;
+            visited[r][c] = true;
 
-            // Found target - stop early
-            if (u.equals(target)) break;
+            // 到达终点，提前结束
+            if (r == tgtRow && c == tgtCol) break;
 
-            // Relax edges
-            for (String neighbor : graph.getNeighbors(u)) {
-                if (visited.contains(neighbor)) continue;
+            // 松弛相邻边（通过 MazeModel.getNeighbors 获取可通行邻居）
+            for (int[] nb : maze.getNeighbors(r, c)) {
+                int nr = nb[0], nc = nb[1];
+                if (visited[nr][nc]) continue;
 
-                double newDist = dist.get(u) + graph.getEdgeWeight(u, neighbor);
-                if (newDist < dist.get(neighbor)) {
-                    dist.put(neighbor, newDist);
-                    prev.put(neighbor, u);
-                    pq.enqueue(new DijkstraEntry(neighbor, newDist));
+                double newDist = dist[r][c] + 1.0; // 无权图，边权为 1
+                if (newDist < dist[nr][nc]) {
+                    dist[nr][nc] = newDist;
+                    prevRow[nr][nc] = r;
+                    prevCol[nr][nc] = c;
+                    pq.enqueue(new DijkstraEntry(nr, nc, newDist));
                 }
             }
         }
 
-        // Reconstruct path
-        return reconstructPath(prev, source, target);
+        // 回溯路径
+        return reconstructPath(prevRow, prevCol, srcRow, srcCol, tgtRow, tgtCol);
     }
 
-    /** Reconstruct the path from prev map. */
-    private static List<String> reconstructPath(Map<String, String> prev, String source, String target) {
-        List<String> path = new ArrayList<>();
-        String current = target;
-
-        if (!prev.containsKey(target) && !source.equals(target)) {
-            return path; // No path found
+    public static List<String> findShortestPath(MazeModel maze, String source, String target) {
+        int[] src = parseKey(source);
+        int[] tgt = parseKey(target);
+        List<int[]> path = findShortestPath(maze, src[0], src[1], tgt[0], tgt[1]);
+        List<String> keys = new ArrayList<>();
+        for (int[] cell : path) {
+            keys.add(cell[0] + "," + cell[1]);
         }
-
-        while (current != null) {
-            path.add(0, current);
-            if (current.equals(source)) break;
-            current = prev.get(current);
-        }
-
-        return path;
+        return keys;
     }
 
-    /**
-     * BFS to find reachable cells within a given distance (for vision).
-     */
-    public static Set<String> getReachableWithin(MazeGraph graph, String source, int maxSteps) {
+    public static Set<String> getReachableWithin(MazeModel maze, int srcRow, int srcCol, int maxSteps) {
         Set<String> reachable = new HashSet<>();
-        Queue<String> queue = new LinkedList<>();
-        Map<String, Integer> distMap = new HashMap<>();
+        Queue<int[]> queue = new LinkedList<>();
+        Map<String, Integer> distMap = new java.util.HashMap<>();
 
-        queue.add(source);
-        distMap.put(source, 0);
-        reachable.add(source);
+        String srcKey = srcRow + "," + srcCol;
+        queue.add(new int[]{srcRow, srcCol});
+        distMap.put(srcKey, 0);
+        reachable.add(srcKey);
 
         while (!queue.isEmpty()) {
-            String u = queue.poll();
-            int d = distMap.get(u);
+            int[] cell = queue.poll();
+            int r = cell[0], c = cell[1];
+            String key = r + "," + c;
+            int d = distMap.get(key);
             if (d >= maxSteps) continue;
 
-            for (String neighbor : graph.getNeighbors(u)) {
-                if (!distMap.containsKey(neighbor)) {
-                    distMap.put(neighbor, d + 1);
-                    reachable.add(neighbor);
-                    queue.add(neighbor);
+            for (int[] nb : maze.getNeighbors(r, c)) {
+                String nbKey = nb[0] + "," + nb[1];
+                if (!distMap.containsKey(nbKey)) {
+                    distMap.put(nbKey, d + 1);
+                    reachable.add(nbKey);
+                    queue.add(nb);
                 }
             }
         }
         return reachable;
+    }
+
+    private static List<int[]> reconstructPath(int[][] prevRow, int[][] prevCol,
+                                               int srcRow, int srcCol,
+                                               int tgtRow, int tgtCol) {
+        List<int[]> path = new ArrayList<>();
+
+        if (prevRow[tgtRow][tgtCol] == -1 && !(srcRow == tgtRow && srcCol == tgtCol)) {
+            return path;
+        }
+
+        int r = tgtRow, c = tgtCol;
+        while (r != -1 && c != -1) {
+            path.add(0, new int[]{r, c});
+            if (r == srcRow && c == srcCol) break;
+            int pr = prevRow[r][c];
+            int pc = prevCol[r][c];
+            r = pr;
+            c = pc;
+        }
+        return path;
+    }
+
+    private static int[] parseKey(String key) {
+        String[] parts = key.split(",");
+        return new int[]{Integer.parseInt(parts[0]), Integer.parseInt(parts[1])};
     }
 }
