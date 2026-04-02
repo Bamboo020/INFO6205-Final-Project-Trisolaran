@@ -105,6 +105,33 @@ public class HashMap<T> implements HashMapInterface<T> {
         return false;
     }
 
+    /**
+     * 若 key 不存在，则插入键值对并返回 null；
+     * 若 key 已存在，则返回已有的 value，不做更新
+     */
+    @SuppressWarnings("unchecked")
+    public T putIfAbsent(Object key, T value) {
+        int idx = indexFor(key);
+        for (Entry<T> e = buckets[idx]; e != null; e = e.next) {
+            if (keysEqual(e.key, key)) return e.value;
+        }
+        buckets[idx] = new Entry<>(key, value, buckets[idx]);
+        size++;
+        if (size > threshold) resize();
+        return null;
+    }
+
+    /**
+     * 判断 key（Object 类型）是否存在
+     */
+    public boolean containsKeyObj(Object key) {
+        int idx = indexFor(key);
+        for (Entry<T> e = buckets[idx]; e != null; e = e.next) {
+            if (keysEqual(e.key, key)) return true;
+        }
+        return false;
+    }
+
     /** 返回键值对数量 */
     @Override
     public int size() {

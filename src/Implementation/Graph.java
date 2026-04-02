@@ -8,15 +8,15 @@ import java.util.List;
 
 /**
  * 无向图 —— 邻接表实现
- * 顶点用 java.util.HashMap 索引，每条边存储两次（双向）
+ * 顶点用自定义 HashMap 索引，每条边存储两次（双向）
  */
 public class Graph<T> implements GraphInterface<T> {
 
-    private final java.util.HashMap<T, List<T>> adjMap;
+    private final HashMap<List<T>> adjMap;
     private int edgeCount;
 
     public Graph() {
-        adjMap = new java.util.HashMap<>();
+        adjMap = new HashMap<>();
         edgeCount = 0;
     }
 
@@ -59,18 +59,18 @@ public class Graph<T> implements GraphInterface<T> {
     /** 判断顶点是否存在 */
     @Override
     public boolean hasVertex(T vertex) {
-        return adjMap.containsKey(vertex);
+        return adjMap.containsKeyObj(vertex);
     }
 
     /** 顶点数 */
     @Override
-    public int getV() {
+    public int getVertex() {
         return adjMap.size();
     }
 
     /** 边数 */
     @Override
-    public int getE() {
+    public int getEdge() {
         return edgeCount;
     }
 }
