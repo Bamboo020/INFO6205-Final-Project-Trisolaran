@@ -1,10 +1,10 @@
 package Model;
 
+import Implementation.ArrayList;
 import Implementation.LinkedStack;
+import Interface.ListInterface;
 import Interface.MazeModel;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Random;
 
 /**
@@ -19,6 +19,8 @@ import java.util.Random;
  *   - MazeModel (MazeGrid) for movement and neighbor lookups
  *   - PriorityQueue ADT (HeapPriorityQueue) via PathFinder for chase pathfinding
  *   - Stack ADT (LinkedStack) for patrol backtracking
+ *
+ * 已修改：使用自定义 ArrayList / ListInterface 替代 java.util.ArrayList / java.util.List
  */
 public class Enemy {
 
@@ -44,8 +46,8 @@ public class Enemy {
     private final Random rng;
 
     // Chase
-    private List<String> chasePath;    // Current path to player (from Dijkstra)
-    private int chasePathIndex;        // Current index in chase path
+    private ListInterface<String> chasePath;    // Current path to player (from Dijkstra)
+    private int chasePathIndex;                 // Current index in chase path
 
     // Movement
     private int moveInterval;          // Move every N game ticks (speed control)
@@ -174,11 +176,11 @@ public class Enemy {
 
     /**
      * PATROL: Wander randomly, preferring unvisited directions.
-     * 通过 MazeModel.getNeighbors(row, col) 获取可通行邻居（返回 List<int[]>）
+     * 通过 MazeModel.getNeighbors(row, col) 获取可通行邻居（返回 ListInterface<int[]>）
      */
     private void doPatrol(MazeModel maze) {
-        List<int[]> rawNeighbors = maze.getNeighbors(row, col);
-        List<String> neighbors = new ArrayList<>();
+        ListInterface<int[]> rawNeighbors = maze.getNeighbors(row, col);
+        ArrayList<String> neighbors = new ArrayList<>();
         for (int[] nb : rawNeighbors) {
             neighbors.add(cellKey(nb[0], nb[1]));
         }
@@ -187,8 +189,9 @@ public class Enemy {
 
         // Filter out the cell we just came from (avoid ping-pong)
         String lastCell = patrolHistory.isEmpty() ? null : patrolHistory.peek();
-        List<String> preferred = new ArrayList<>();
-        for (String n : neighbors) {
+        ArrayList<String> preferred = new ArrayList<>();
+        for (int i = 0; i < neighbors.size(); i++) {
+            String n = neighbors.get(i);
             if (!n.equals(lastCell)) {
                 preferred.add(n);
             }

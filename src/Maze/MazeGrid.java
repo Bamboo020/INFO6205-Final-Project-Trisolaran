@@ -1,11 +1,10 @@
 package Maze;
 
+import Implementation.ArrayList;
 import Implementation.Graph;
 import Implementation.HashMap;
+import Interface.ListInterface;
 import Interface.MazeModel;
-
-import java.util.ArrayList;
-import java.util.List;
 
 /**
  * MazeGrid —— MazeModel 的具体实现
@@ -16,7 +15,7 @@ import java.util.List;
  *   - Graph<String>          ：打通的相邻格子形成边（键格式 "r,c"）
  *   - HashMap<CellState>     ：每个格子的状态（键格式 "r,c"）
  *
- * 初始状态：所有内部墙均存在，所有格子状态为 EMPTY。
+ * 已修改：使用自定义 ArrayList 替代 java.util.ArrayList / java.util.List
  */
 public class MazeGrid implements MazeModel {
 
@@ -71,8 +70,8 @@ public class MazeGrid implements MazeModel {
     }
 
     @Override
-    public List<int[]> getNeighbors(int row, int col) {
-        List<int[]> result = new ArrayList<>();
+    public ListInterface<int[]> getNeighbors(int row, int col) {
+        ArrayList<int[]> result = new ArrayList<>();
         for (String nKey : graph.adj(key(row, col))) {
             String[] parts = nKey.split(",");
             result.add(new int[]{Integer.parseInt(parts[0]), Integer.parseInt(parts[1])});
@@ -126,8 +125,8 @@ public class MazeGrid implements MazeModel {
     }
 
     /** 返回格子在图中的四个方向邻居（不论是否有墙），用于生成器遍历 */
-    List<int[]> allNeighbors(int r, int c) {
-        List<int[]> list = new ArrayList<>();
+    ArrayList<int[]> allNeighbors(int r, int c) {
+        ArrayList<int[]> list = new ArrayList<>();
         int[][] dirs = {{-1,0},{1,0},{0,-1},{0,1}};
         for (int[] d : dirs) {
             int nr = r + d[0], nc = c + d[1];

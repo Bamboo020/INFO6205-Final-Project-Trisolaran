@@ -1,10 +1,15 @@
-package Model;
+package Controller;
 
+import Implementation.ArrayList;
+import Implementation.HashSet;
 import Implementation.HeapPriorityQueue;
 import Maze.Difficulty;
 import Maze.MazeGrid;
+import Interface.ListInterface;
+import Interface.SetInterface;
+import Model.*;
 
-import java.util.*;
+import java.util.Random;
 
 /**
  * GameController - Manages game state, processes events via PriorityQueue,
@@ -13,6 +18,11 @@ import java.util.*;
  * Maze generation delegates to MazeGrid.generateMaze(Difficulty), which
  * internally uses DFSMazeGenerator (EASY), PrimMazeGenerator (MEDIUM), or
  * KruskalMazeGenerator (HARD) — all from the main project's Maze package.
+ *
+ * 已修改：
+ *   - ArrayList  替代 java.util.ArrayList / java.util.List
+ *   - HashSet    替代 java.util.HashSet / java.util.Set
+ *   - 手动 Fisher-Yates shuffle 替代 Collections.shuffle()
  */
 public class GameController {
 
@@ -31,12 +41,12 @@ public class GameController {
     private int mazeRows;
     private int mazeCols;
     private String exitCell;
-    private final Set<String> coinCells;
-    private final Set<String> trapCells;
-    private List<String> hintPath;
+    private final HashSet<String> coinCells;
+    private final HashSet<String> trapCells;
+    private ListInterface<String> hintPath;
 
     // Enemy AI
-    private final List<Enemy> enemies;
+    private final ArrayList<Enemy> enemies;
     private static final int NUM_ENEMIES = 3;
     private int playerLives;
     private static final int MAX_LIVES = 3;
@@ -44,7 +54,7 @@ public class GameController {
     // State
     private GameState state;
     private String statusMessage;
-    private final List<GameEventListener> listeners;
+    private final ArrayList<GameEventListener> listeners;
 
     /** Callback interface for UI updates. */
     public interface GameEventListener {
@@ -98,9 +108,9 @@ public class GameController {
         // Place coins/traps at dead-end cells
         coinCells.clear();
         trapCells.clear();
-        hintPath.clear();
+        hintPath = new ArrayList<>();
 
-        List<String> deadEnds = findDeadEnds();
+        ListInterface<String> deadEnds = findDeadEnds();
         Random rng = new Random();
         for (String cell : deadEnds) {
             if (!cell.equals(player.getCellKey()) && !cell.equals(exitCell)) {
@@ -133,8 +143,8 @@ public class GameController {
      * Find dead-end cells (cells with exactly 1 passage-neighbor).
      * Uses MazeGrid.getNeighbors() which returns only passable neighbors.
      */
-    private List<String> findDeadEnds() {
-        List<String> deadEnds = new ArrayList<>();
+    private ListInterface<String> findDeadEnds() {
+        ArrayList<String> deadEnds = new ArrayList<>();
         for (int r = 0; r < mazeRows; r++) {
             for (int c = 0; c < mazeCols; c++) {
                 if (maze.getNeighbors(r, c).size() == 1) {
@@ -150,27 +160,32 @@ public class GameController {
     /** Spawn enemies at positions spread across the maze. */
     private void spawnEnemies(Random rng) {
         // All cells are valid positions (no wall-cells in main 2's maze model)
-        List<String> allCells = new ArrayList<>();
+        ArrayList<String> allCells = new ArrayList<>();
         for (int r = 0; r < mazeRows; r++) {
             for (int c = 0; c < mazeCols; c++) {
                 allCells.add(cellKey(r, c));
             }
         }
-        allCells.remove(player.getCellKey());
-        allCells.remove(exitCell);
+        allCells.removeElement(player.getCellKey());
+        allCells.removeElement(exitCell);
 
         // Remove cells too close to player (minimum 8 Manhattan distance)
-        allCells.removeIf(cell -> {
+        // 手动 removeIf 替代 java.util 的 removeIf
+        ArrayList<String> filtered = new ArrayList<>();
+        for (String cell : allCells) {
             int r = Enemy.getRow(cell);
             int c = Enemy.getCol(cell);
-            return (Math.abs(r - player.getRow()) + Math.abs(c - player.getCol())) < 8;
-        });
+            if ((Math.abs(r - player.getRow()) + Math.abs(c - player.getCol())) >= 8) {
+                filtered.add(cell);
+            }
+        }
 
-        Collections.shuffle(allCells, rng);
+        // Fisher-Yates shuffle 替代 Collections.shuffle()
+        shuffle(filtered, rng);
 
-        int count = Math.min(NUM_ENEMIES, allCells.size());
+        int count = Math.min(NUM_ENEMIES, filtered.size());
         for (int i = 0; i < count; i++) {
-            String cell = allCells.get(i);
+            String cell = filtered.get(i);
             int r = Enemy.getRow(cell);
             int c = Enemy.getCol(cell);
             // Detection radius 6, move every 2 ticks (slower than player)
@@ -180,6 +195,18 @@ public class GameController {
             // Schedule first enemy move via PriorityQueue
             eventQueue.enqueue(new GameEvent(
                     GameEvent.EventType.ENEMY_MOVE, currentTick + 2, String.valueOf(i)));
+        }
+    }
+
+    /**
+     * Fisher-Yates 洗牌算法，替代 Collections.shuffle()
+     */
+    private static <E> void shuffle(ArrayList<E> list, Random rng) {
+        for (int i = list.size() - 1; i > 0; i--) {
+            int j = rng.nextInt(i + 1);
+            E temp = list.get(i);
+            list.set(i, list.get(j));
+            list.set(j, temp);
         }
     }
 
@@ -340,7 +367,7 @@ public class GameController {
                     }
                 }
                 case HINT_EXPIRE -> {
-                    hintPath.clear();
+                    hintPath = new ArrayList<>();
                     player.activatePathHint(false);
                     notifyStatus("Path hint expired.");
                     notifyUpdate();
@@ -371,7 +398,7 @@ public class GameController {
     public void useSkill(Skill.SkillType type) {
         if (state != GameState.PLAYING) return;
 
-        List<Skill> skills = player.getAllSkills();
+        ListInterface<Skill> skills = player.getAllSkills();
         Skill target = null;
         for (Skill s : skills) {
             if (s.getType() == type) { target = s; break; }
@@ -470,11 +497,11 @@ public class GameController {
     public MazeGrid getMaze() { return maze; }
     public GameState getState() { return state; }
     public String getExitCell() { return exitCell; }
-    public Set<String> getCoinCells() { return coinCells; }
-    public Set<String> getTrapCells() { return trapCells; }
-    public List<String> getHintPath() { return hintPath; }
+    public SetInterface<String> getCoinCells() { return coinCells; }
+    public SetInterface<String> getTrapCells() { return trapCells; }
+    public ListInterface<String> getHintPath() { return hintPath; }
     public String getStatusMessage() { return statusMessage; }
     public int getCurrentTick() { return currentTick; }
-    public List<Enemy> getEnemies() { return enemies; }
+    public ListInterface<Enemy> getEnemies() { return enemies; }
     public int getPlayerLives() { return playerLives; }
 }

@@ -1,15 +1,19 @@
 package Model;
 
+import Implementation.ArrayList;
 import Implementation.LinkedStack;
 import Implementation.SkillTreeBST;
+import Interface.ListInterface;
 import Model.Skill.SkillType;
-
-import java.util.List;
 
 /**
  * Player - The player character controlled by keyboard input.
  * Tracks position, movement history (via Stack), level, experience,
  * and skills (via BST).
+ *
+ * 已修改：
+ *   - 使用自定义 ArrayList / ListInterface 替代 java.util.List
+ *   - 手动循环替代 stream().filter().toList()
  */
 public class Player {
 
@@ -109,7 +113,7 @@ public class Player {
     /** Unlock all skills whose requirement <= current level. */
     private void unlockSkillsForLevel() {
         // key = levelRequired * 10 + ordinal, so threshold = level * 10 + 9
-        List<Skill> available = skillTree.getUpTo(level * 10 + 9);
+        ListInterface<Skill> available = skillTree.getUpTo(level * 10 + 9);
         for (Skill s : available) {
             if (!s.isUnlocked()) {
                 s.unlock();
@@ -126,15 +130,20 @@ public class Player {
     // ==================== Skills ====================
 
     /** Get all skills (sorted by level requirement via in-order traversal). */
-    public List<Skill> getAllSkills() {
+    public ListInterface<Skill> getAllSkills() {
         return skillTree.inOrderTraversal();
     }
 
-    /** Get unlocked skills. */
-    public List<Skill> getUnlockedSkills() {
-        return skillTree.getUpTo(level * 10 + 9).stream()
-                .filter(Skill::isUnlocked)
-                .toList();
+    /** Get unlocked skills. 手动循环替代 stream().filter().toList() */
+    public ListInterface<Skill> getUnlockedSkills() {
+        ListInterface<Skill> available = skillTree.getUpTo(level * 10 + 9);
+        ArrayList<Skill> unlocked = new ArrayList<>();
+        for (Skill s : available) {
+            if (s.isUnlocked()) {
+                unlocked.add(s);
+            }
+        }
+        return unlocked;
     }
 
     /** Activate speed boost. */

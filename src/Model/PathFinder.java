@@ -1,10 +1,24 @@
 package Model;
 
+import Implementation.ArrayList;
+import Implementation.HashMap;
+import Implementation.HashSet;
 import Implementation.HeapPriorityQueue;
+import Implementation.Queue;
+import Interface.ListInterface;
 import Interface.MazeModel;
+import Interface.SetInterface;
 
-import java.util.*;
-
+/**
+ * PathFinder —— 路径搜索工具
+ *
+ * 已修改：
+ *   - ArrayList   替代 java.util.ArrayList / java.util.List
+ *   - HashSet     替代 java.util.HashSet / java.util.Set
+ *   - Queue       替代 java.util.LinkedList (Queue 用法)
+ *   - HashMap     替代 java.util.HashMap / java.util.Map
+ *   - 手动填充数组替代 java.util.Arrays.fill
+ */
 public class PathFinder {
 
     private static class DijkstraEntry implements Comparable<DijkstraEntry> {
@@ -23,19 +37,24 @@ public class PathFinder {
         }
     }
 
-    public static List<int[]> findShortestPath(MazeModel maze, int srcRow, int srcCol,
-                                               int tgtRow, int tgtCol) {
+    public static ListInterface<int[]> findShortestPath(MazeModel maze, int srcRow, int srcCol,
+                                                        int tgtRow, int tgtCol) {
         int rows = maze.getHeight();
         int cols = maze.getWidth();
 
         double[][] dist = new double[rows][cols];
-        for (double[] row : dist) Arrays.fill(row, Double.MAX_VALUE);
+        for (int r = 0; r < rows; r++)
+            for (int c = 0; c < cols; c++)
+                dist[r][c] = Double.MAX_VALUE;
         dist[srcRow][srcCol] = 0.0;
 
         int[][] prevRow = new int[rows][cols];
         int[][] prevCol = new int[rows][cols];
-        for (int[] row : prevRow) Arrays.fill(row, -1);
-        for (int[] row : prevCol) Arrays.fill(row, -1);
+        for (int r = 0; r < rows; r++)
+            for (int c = 0; c < cols; c++) {
+                prevRow[r][c] = -1;
+                prevCol[r][c] = -1;
+            }
 
         boolean[][] visited = new boolean[rows][cols];
 
@@ -72,21 +91,21 @@ public class PathFinder {
         return reconstructPath(prevRow, prevCol, srcRow, srcCol, tgtRow, tgtCol);
     }
 
-    public static List<String> findShortestPath(MazeModel maze, String source, String target) {
+    public static ListInterface<String> findShortestPath(MazeModel maze, String source, String target) {
         int[] src = parseKey(source);
         int[] tgt = parseKey(target);
-        List<int[]> path = findShortestPath(maze, src[0], src[1], tgt[0], tgt[1]);
-        List<String> keys = new ArrayList<>();
+        ListInterface<int[]> path = findShortestPath(maze, src[0], src[1], tgt[0], tgt[1]);
+        ArrayList<String> keys = new ArrayList<>();
         for (int[] cell : path) {
             keys.add(cell[0] + "," + cell[1]);
         }
         return keys;
     }
 
-    public static Set<String> getReachableWithin(MazeModel maze, int srcRow, int srcCol, int maxSteps) {
-        Set<String> reachable = new HashSet<>();
-        Queue<int[]> queue = new LinkedList<>();
-        Map<String, Integer> distMap = new HashMap<>();
+    public static SetInterface<String> getReachableWithin(MazeModel maze, int srcRow, int srcCol, int maxSteps) {
+        HashSet<String> reachable = new HashSet<>();
+        Queue<int[]> queue = new Queue<>();
+        HashMap<Integer> distMap = new HashMap<>();
 
         String srcKey = srcRow + "," + srcCol;
         queue.add(new int[]{srcRow, srcCol});
@@ -97,12 +116,12 @@ public class PathFinder {
             int[] cell = queue.poll();
             int r = cell[0], c = cell[1];
             String key = r + "," + c;
-            int d = distMap.get(key);
+            Integer d = distMap.get(key);
             if (d >= maxSteps) continue;
 
             for (int[] nb : maze.getNeighbors(r, c)) {
                 String nbKey = nb[0] + "," + nb[1];
-                if (!distMap.containsKey(nbKey)) {
+                if (!distMap.containsKeyObj(nbKey)) {
                     distMap.put(nbKey, d + 1);
                     reachable.add(nbKey);
                     queue.add(nb);
@@ -112,10 +131,10 @@ public class PathFinder {
         return reachable;
     }
 
-    private static List<int[]> reconstructPath(int[][] prevRow, int[][] prevCol,
-                                               int srcRow, int srcCol,
-                                               int tgtRow, int tgtCol) {
-        List<int[]> path = new ArrayList<>();
+    private static ListInterface<int[]> reconstructPath(int[][] prevRow, int[][] prevCol,
+                                                        int srcRow, int srcCol,
+                                                        int tgtRow, int tgtCol) {
+        ArrayList<int[]> path = new ArrayList<>();
 
         if (prevRow[tgtRow][tgtCol] == -1 && !(srcRow == tgtRow && srcCol == tgtCol)) {
             return path;

@@ -2,8 +2,8 @@ package Implementation;
 
 import Interface.BinarySearchTreeInterface;
 
-import java.util.ArrayList;
-import java.util.List;
+import Implementation.ArrayList;
+import Interface.ListInterface;
 
 /**
  * SkillTreeBST - Binary Search Tree implementation for the player's skill system.
@@ -104,13 +104,13 @@ public class SkillTreeBST<K extends Comparable<K>, V> implements BinarySearchTre
     }
 
     @Override
-    public List<V> inOrderTraversal() {
-        List<V> result = new ArrayList<>();
+    public ListInterface<V> inOrderTraversal() {
+        ArrayList<V> result = new ArrayList<>();
         inOrderRec(root, result);
         return result;
     }
 
-    private void inOrderRec(BSTNode node, List<V> result) {
+    private void inOrderRec(BSTNode node, ArrayList<V> result) {
         if (node == null) return;
         inOrderRec(node.left, result);
         result.add(node.value);
@@ -118,13 +118,13 @@ public class SkillTreeBST<K extends Comparable<K>, V> implements BinarySearchTre
     }
 
     @Override
-    public List<V> getUpTo(K key) {
-        List<V> result = new ArrayList<>();
+    public ListInterface<V> getUpTo(K key) {
+        ArrayList<V> result = new ArrayList<>();
         getUpToRec(root, key, result);
         return result;
     }
 
-    private void getUpToRec(BSTNode node, K key, List<V> result) {
+    private void getUpToRec(BSTNode node, K key, ArrayList<V> result) {
         if (node == null) return;
         getUpToRec(node.left, key, result);
         if (node.key.compareTo(key) <= 0) {
