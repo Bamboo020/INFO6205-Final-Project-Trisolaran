@@ -2,9 +2,6 @@ package Implementation;
 
 import Interface.HeapInterface;
 
-import java.util.*;
-import java.util.HashMap;
-
 /**
  * 最小堆 —— 数组（ArrayList）实现
  * 支持 O(log n) 的 insert / popMin / decreaseKey
@@ -14,12 +11,12 @@ import java.util.HashMap;
  */
 public class MinHeap<T extends Comparable<T>> implements HeapInterface<T> {
 
-    private final List<T> heap;           // 从下标 0 开始存储
-    private final Map<T, Integer> indexMap; // 元素 -> 堆下标
+    private final java.util.List<T> heap;           // 从下标 0 开始存储
+    private final java.util.Map<T, Integer> indexMap; // 元素 -> 堆下标
 
     public MinHeap() {
-        heap = new ArrayList<>();
-        indexMap = new HashMap<>();
+        heap = new java.util.ArrayList<>();
+        indexMap = new java.util.HashMap<>();
     }
 
     // -------- 公开 API --------
@@ -36,14 +33,14 @@ public class MinHeap<T extends Comparable<T>> implements HeapInterface<T> {
     /** 查看堆顶最小元素，O(1) */
     @Override
     public T peekMin() {
-        if (isEmpty()) throw new NoSuchElementException("堆为空");
+        if (isEmpty()) throw new java.util.NoSuchElementException("堆为空");
         return heap.get(0);
     }
 
     /** 弹出并返回最小元素，O(log n) */
     @Override
     public T popMin() {
-        if (isEmpty()) throw new NoSuchElementException("堆为空");
+        if (isEmpty()) throw new java.util.NoSuchElementException("堆为空");
         T min = heap.get(0);
         int last = heap.size() - 1;
         swap(0, last);
@@ -61,7 +58,7 @@ public class MinHeap<T extends Comparable<T>> implements HeapInterface<T> {
     @Override
     public void decreaseKey(T item, T newKey) {
         Integer idx = indexMap.get(item);
-        if (idx == null) throw new NoSuchElementException("元素不在堆中: " + item);
+        if (idx == null) throw new java.util.NoSuchElementException("元素不在堆中: " + item);
         if (newKey.compareTo(item) > 0) throw new IllegalArgumentException("新键值必须 <= 旧键值");
         indexMap.remove(item);
         heap.set(idx, newKey);

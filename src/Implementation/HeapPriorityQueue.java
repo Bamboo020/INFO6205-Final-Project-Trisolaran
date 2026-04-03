@@ -2,15 +2,12 @@ package Implementation;
 
 import Interface.PriorityQueueInterface;
 
-import java.util.ArrayList;
-import java.util.NoSuchElementException;
-
 public class HeapPriorityQueue<T extends Comparable<T>> implements PriorityQueueInterface<T> {
 
-    private final ArrayList<T> heap;
+    private final java.util.ArrayList<T> heap;
 
     public HeapPriorityQueue() {
-        this.heap = new ArrayList<>();
+        this.heap = new java.util.ArrayList<>();
     }
 
     @Override
@@ -22,7 +19,7 @@ public class HeapPriorityQueue<T extends Comparable<T>> implements PriorityQueue
     @Override
     public T dequeue() {
         if (isEmpty()) {
-            throw new NoSuchElementException("Priority queue is empty");
+            throw new java.util.NoSuchElementException("Priority queue is empty");
         }
         T min = heap.get(0);
         T last = heap.remove(heap.size() - 1);
@@ -36,7 +33,7 @@ public class HeapPriorityQueue<T extends Comparable<T>> implements PriorityQueue
     @Override
     public T peek() {
         if (isEmpty()) {
-            throw new NoSuchElementException("Priority queue is empty");
+            throw new java.util.NoSuchElementException("Priority queue is empty");
         }
         return heap.get(0);
     }

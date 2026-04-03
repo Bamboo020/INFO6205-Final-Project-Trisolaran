@@ -2,9 +2,7 @@ package Implementation;
 
 import Interface.SortInterface;
 
-import java.util.ArrayList;
 import java.util.Comparator;
-import java.util.List;
 
 /**
  * 归并排序 —— 泛型实现，支持 Comparator
@@ -35,11 +33,12 @@ public class MergeSort<T> implements SortInterface<T> {
      */
     @Override
     @SuppressWarnings("unchecked")
-    public List<T> sortList(List<T> list, Comparator<T> cmp) {
-        if (list == null || list.size() <= 1) return new ArrayList<>(list == null ? List.of() : list);
+    public java.util.List<T> sortList(java.util.List<T> list, Comparator<T> cmp) {
+        if (list == null || list.size() <= 1)
+            return new java.util.ArrayList<>(list == null ? java.util.List.of() : list);
         T[] arr = (T[]) list.toArray();
         sort(arr, cmp);
-        List<T> result = new ArrayList<>(arr.length);
+        java.util.List<T> result = new java.util.ArrayList<>(arr.length);
         for (T item : arr) result.add(item);
         return result;
     }

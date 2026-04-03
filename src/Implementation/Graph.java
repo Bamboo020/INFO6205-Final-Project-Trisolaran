@@ -2,17 +2,13 @@ package Implementation;
 
 import Interface.GraphInterface;
 
-import java.util.ArrayList;
-import java.util.LinkedList;
-import java.util.List;
-
 /**
  * 无向图 —— 邻接表实现
  * 顶点用自定义 HashMap 索引，每条边存储两次（双向）
  */
 public class Graph<T> implements GraphInterface<T> {
 
-    private final HashMap<List<T>> adjMap;
+    private final HashMap<java.util.List<T>> adjMap;
     private int edgeCount;
 
     public Graph() {
@@ -23,7 +19,7 @@ public class Graph<T> implements GraphInterface<T> {
     /** 添加顶点（若已存在则忽略） */
     @Override
     public void addVertex(T vertex) {
-        adjMap.putIfAbsent(vertex, new LinkedList<>());
+        adjMap.putIfAbsent(vertex, new java.util.LinkedList<>());
     }
 
     /** 添加无向边；若顶点不存在则自动添加 */
@@ -39,8 +35,8 @@ public class Graph<T> implements GraphInterface<T> {
     /** 删除无向边（两个方向都删除） */
     @Override
     public void removeEdge(T start, T end) {
-        List<T> startList = adjMap.get(start);
-        List<T> endList = adjMap.get(end);
+        java.util.List<T> startList = adjMap.get(start);
+        java.util.List<T> endList   = adjMap.get(end);
         if (startList != null && endList != null) {
             boolean removed = startList.remove(end);
             endList.remove(start);
@@ -51,8 +47,8 @@ public class Graph<T> implements GraphInterface<T> {
     /** 返回与 start 相邻的所有顶点 */
     @Override
     public Iterable<T> adj(T start) {
-        List<T> neighbors = adjMap.get(start);
-        if (neighbors == null) return new ArrayList<>();
+        java.util.List<T> neighbors = adjMap.get(start);
+        if (neighbors == null) return new java.util.ArrayList<>();
         return neighbors;
     }
 
