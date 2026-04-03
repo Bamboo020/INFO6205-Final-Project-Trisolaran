@@ -1,10 +1,9 @@
 package Maze;
 
+import Implementation.ArrayList;
 import Implementation.Stack;
 import Interface.MazeGenerator;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Random;
 
 /**
@@ -13,44 +12,36 @@ import java.util.Random;
  * 底层使用手写 Stack<int[]> 替代系统调用栈
  *
  * 生成结果保证：
- *   1. 完美迷宫（任意两格之间有且仅有一条路径）
- *   2. 所有格子均可达
+ *   1. 完美迷宫（任意两逻辑格之间有且仅有一条路径）
+ *   2. 所有逻辑格均可达
  */
 public class DFSMazeGenerator implements MazeGenerator {
 
     private final Random random = new Random();
 
-    /**
-     * 对给定 MazeGrid 执行迷宫生成
-     * 入口固定为左上角 (0, 0)
-     */
     @Override
     public void generate(MazeGrid maze) {
-        int rows = maze.getRows();
-        int cols = maze.getCols();
-        boolean[][] visited = new boolean[rows][cols];
+        int logRows = maze.getLogRows();
+        int logCols = maze.getLogCols();
+        boolean[][] visited = new boolean[logRows][logCols];
 
         Stack<int[]> stack = new Stack<>();
-        int startR = 0, startC = 0;
-        visited[startR][startC] = true;
-        stack.push(new int[]{startR, startC});
+        visited[0][0] = true;
+        stack.push(new int[]{0, 0});
 
         while (!stack.isEmpty()) {
-            int[] current = stack.peek();
-            int r = current[0];
-            int c = current[1];
+            int[] cur = stack.peek();
+            int lr = cur[0], lc = cur[1];
 
-            // 收集未访问的邻居
-            List<int[]> unvisited = new ArrayList<>();
-            for (int[] nb : maze.allNeighbors(r, c)) {
+            // 收集未访问的逻辑邻居
+            ArrayList<int[]> unvisited = new ArrayList<>();
+            for (int[] nb : maze.logicalNeighbors(lr, lc))
                 if (!visited[nb[0]][nb[1]]) unvisited.add(nb);
-            }
 
             if (!unvisited.isEmpty()) {
-                // 随机选一个未访问邻居
+                // 随机选一个未访问的逻辑邻居，打通 3 格宽走廊
                 int[] chosen = unvisited.get(random.nextInt(unvisited.size()));
-                // 拆墙
-                maze.removeWall(r, c, chosen[0], chosen[1]);
+                maze.openCorridor(lr, lc, chosen[0], chosen[1]);
                 visited[chosen[0]][chosen[1]] = true;
                 stack.push(chosen);
             } else {
