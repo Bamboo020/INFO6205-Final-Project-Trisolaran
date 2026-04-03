@@ -15,14 +15,11 @@ import java.util.Random;
  * GameController - Manages game state, processes events via PriorityQueue,
  * and handles player input.
  *
- * Maze generation delegates to MazeGrid.generateMaze(Difficulty), which
- * internally uses DFSMazeGenerator (EASY), PrimMazeGenerator (MEDIUM), or
- * KruskalMazeGenerator (HARD) — all from the main project's Maze package.
- *
  * 已修改：
- *   - ArrayList  替代 java.util.ArrayList / java.util.List
- *   - HashSet    替代 java.util.HashSet / java.util.Set
- *   - 手动 Fisher-Yates shuffle 替代 Collections.shuffle()
+ *   - 移除 Skill 技能系统，替换为 Item 道具系统
+ *   - 新增 itemCells（道具拾取点）+ itemCellTypes（道具类型映射）
+ *   - 新增 useItem() 方法处理三种道具的使用逻辑
+ *   - movePlayer() 中增加穿墙判断
  */
 public class GameController {
 
@@ -44,6 +41,10 @@ public class GameController {
     private final HashSet<String> coinCells;
     private final HashSet<String> trapCells;
     private ListInterface<String> hintPath;
+
+    // ======== 道具散布点 (HashSet + HashMap) ========
+    private final HashSet<String> itemCells;                          // 含有道具的格子
+    private final Implementation.HashMap<Item.ItemType> itemCellTypes; // 格子 → 道具类型
 
     // Enemy AI
     private final ArrayList<Enemy> enemies;
@@ -67,6 +68,8 @@ public class GameController {
     public GameController() {
         this.coinCells = new HashSet<>();
         this.trapCells = new HashSet<>();
+        this.itemCells = new HashSet<>();
+        this.itemCellTypes = new Implementation.HashMap<>();
         this.hintPath = new ArrayList<>();
         this.enemies = new ArrayList<>();
         this.listeners = new ArrayList<>();
@@ -80,69 +83,84 @@ public class GameController {
 
     // ==================== Game Initialization ====================
 
-    /**
-     * Start a new game with the given maze size and difficulty.
-     * Maze generation uses MazeGrid.generateMaze(difficulty):
-     *   EASY   -> DFSMazeGenerator
-     *   MEDIUM -> PrimMazeGenerator
-     *   HARD   -> KruskalMazeGenerator
-     */
     public void newGame(int rows, int cols, Difficulty difficulty) {
         this.mazeRows = rows;
         this.mazeCols = cols;
 
-        // Generate maze using the three generators in the main project
         maze = new MazeGrid(rows, cols);
         maze.generateMaze(difficulty);
 
-        // Player starts at top-left (0, 0)
         player = new Player(0, 0);
 
-        // Exit at bottom-right corner
         exitCell = cellKey(rows - 1, cols - 1);
 
-        // Initialize event queue
         eventQueue = new HeapPriorityQueue<>();
         currentTick = 0;
 
-        // Place coins/traps at dead-end cells
         coinCells.clear();
         trapCells.clear();
+        itemCells.clear();
+        // HashMap 没有 clear，重新初始化或逐个 remove
         hintPath = new ArrayList<>();
 
         ListInterface<String> deadEnds = findDeadEnds();
         Random rng = new Random();
+
         for (String cell : deadEnds) {
             if (!cell.equals(player.getCellKey()) && !cell.equals(exitCell)) {
-                if (rng.nextDouble() < 0.6) {
+                double roll = rng.nextDouble();
+                if (roll < 0.35) {
                     coinCells.add(cell);
-                } else if (rng.nextDouble() < 0.3) {
+                } else if (roll < 0.45) {
                     trapCells.add(cell);
+                } else if (roll < 0.60) {
+                    // ---- 放置道具 ----
+                    placeRandomItem(cell, rng);
                 }
             }
+        }
+
+        // 额外在非死胡同处放置一些道具（保证玩家能捡到）
+        ArrayList<String> allOpen = new ArrayList<>();
+        for (int r = 0; r < mazeRows; r++) {
+            for (int c = 0; c < mazeCols; c++) {
+                String key = cellKey(r, c);
+                if (!key.equals(player.getCellKey()) && !key.equals(exitCell)
+                        && !coinCells.contains(key) && !trapCells.contains(key)
+                        && !itemCells.contains(key)) {
+                    allOpen.add(key);
+                }
+            }
+        }
+        shuffle(allOpen, rng);
+        int extraItems = Math.min(3, allOpen.size());
+        for (int i = 0; i < extraItems; i++) {
+            placeRandomItem(allOpen.get(i), rng);
         }
 
         state = GameState.PLAYING;
         playerLives = MAX_LIVES;
 
-        // Spawn enemies at strategic positions
         enemies.clear();
         spawnEnemies(rng);
 
-        statusMessage = "Find the exit! Beware of enemies! Lives: " + playerLives;
+        statusMessage = "Find the exit! Pick up items [1=Speed 2=WallPass 3=Attack]. Lives: " + playerLives;
         notifyUpdate();
         notifyStatus(statusMessage);
     }
 
-    /** Utility: create a cell key from row and column. */
+    /** 在指定格子放置随机道具 */
+    private void placeRandomItem(String cell, Random rng) {
+        Item.ItemType[] types = Item.ItemType.values();
+        Item.ItemType type = types[rng.nextInt(types.length)];
+        itemCells.add(cell);
+        itemCellTypes.put(cell, type);
+    }
+
     private static String cellKey(int r, int c) {
         return r + "," + c;
     }
 
-    /**
-     * Find dead-end cells (cells with exactly 1 passage-neighbor).
-     * Uses MazeGrid.getNeighbors() which returns only passable neighbors.
-     */
     private ListInterface<String> findDeadEnds() {
         ArrayList<String> deadEnds = new ArrayList<>();
         for (int r = 0; r < mazeRows; r++) {
@@ -157,9 +175,7 @@ public class GameController {
 
     // ==================== Enemy AI ====================
 
-    /** Spawn enemies at positions spread across the maze. */
     private void spawnEnemies(Random rng) {
-        // All cells are valid positions (no wall-cells in main 2's maze model)
         ArrayList<String> allCells = new ArrayList<>();
         for (int r = 0; r < mazeRows; r++) {
             for (int c = 0; c < mazeCols; c++) {
@@ -169,8 +185,6 @@ public class GameController {
         allCells.removeElement(player.getCellKey());
         allCells.removeElement(exitCell);
 
-        // Remove cells too close to player (minimum 8 Manhattan distance)
-        // 手动 removeIf 替代 java.util 的 removeIf
         ArrayList<String> filtered = new ArrayList<>();
         for (String cell : allCells) {
             int r = Enemy.getRow(cell);
@@ -180,7 +194,6 @@ public class GameController {
             }
         }
 
-        // Fisher-Yates shuffle 替代 Collections.shuffle()
         shuffle(filtered, rng);
 
         int count = Math.min(NUM_ENEMIES, filtered.size());
@@ -188,19 +201,14 @@ public class GameController {
             String cell = filtered.get(i);
             int r = Enemy.getRow(cell);
             int c = Enemy.getCol(cell);
-            // Detection radius 6, move every 2 ticks (slower than player)
             Enemy enemy = new Enemy(i, r, c, 6, 2);
             enemies.add(enemy);
 
-            // Schedule first enemy move via PriorityQueue
             eventQueue.enqueue(new GameEvent(
                     GameEvent.EventType.ENEMY_MOVE, currentTick + 2, String.valueOf(i)));
         }
     }
 
-    /**
-     * Fisher-Yates 洗牌算法，替代 Collections.shuffle()
-     */
     private static <E> void shuffle(ArrayList<E> list, Random rng) {
         for (int i = list.size() - 1; i > 0; i--) {
             int j = rng.nextInt(i + 1);
@@ -210,7 +218,6 @@ public class GameController {
         }
     }
 
-    /** Update all enemies (called each tick). */
     private void updateEnemies() {
         for (Enemy enemy : enemies) {
             enemy.update(maze, player.getRow(), player.getCol(), currentTick);
@@ -219,7 +226,6 @@ public class GameController {
                 GameEvent.EventType.ENEMY_MOVE, currentTick + 1, "all"));
     }
 
-    /** Check if any enemy is on the player's cell. */
     private boolean checkEnemyCollision() {
         for (Enemy enemy : enemies) {
             if (enemy.isAtPlayer(player.getRow(), player.getCol()) && !enemy.isStunned()) {
@@ -235,11 +241,8 @@ public class GameController {
                     return true;
                 }
 
-                // Respawn player at start
                 player.getMoveHistory().clear();
                 player.moveTo(0, 0);
-
-                // Stun the catching enemy
                 enemy.stun(5);
 
                 for (GameEventListener l : listeners) {
@@ -268,7 +271,7 @@ public class GameController {
         int newRow = player.getRow() + dr;
         int newCol = player.getCol() + dc;
 
-        // Speed boost: move 2 cells if both steps are passable
+        // ---- 加速道具：连续移动 2 格 ----
         if (player.isSpeedBoostActive()) {
             int farRow = player.getRow() + dr * 2;
             int farCol = player.getCol() + dc * 2;
@@ -279,7 +282,27 @@ public class GameController {
             }
         }
 
-        // Validate move: target must be a passable neighbor
+        // ---- 穿墙道具：如果目标不可通行且穿墙已激活 ----
+        if (!isPassable(player.getRow(), player.getCol(), newRow, newCol)
+                && player.isWallPassActive()) {
+            // 检查目标格是否在范围内
+            if (newRow >= 0 && newRow < mazeRows && newCol >= 0 && newCol < mazeCols) {
+                // 穿墙成功！消耗穿墙状态
+                player.activateWallPass(false);
+                notifyStatus("Wall Pass used! You phased through a wall!");
+                // 直接移动到目标格（不检查是否 passable）
+                player.moveTo(newRow, newCol);
+                currentTick++;
+                processCellEvents();
+                updateEnemies();
+                checkEnemyCollision();
+                processEvents();
+                notifyUpdate();
+                return;
+            }
+        }
+
+        // 普通移动：目标必须可通行
         if (!isPassable(player.getRow(), player.getCol(), newRow, newCol)) {
             notifyStatus("Wall! Try another direction. Press U to undo.");
             return;
@@ -296,10 +319,6 @@ public class GameController {
         notifyUpdate();
     }
 
-    /**
-     * Check if (toRow, toCol) is a passable neighbor of (fromRow, fromCol).
-     * Uses MazeGrid.getNeighbors() which returns only wall-free adjacent cells.
-     */
     private boolean isPassable(int fromRow, int fromCol, int toRow, int toCol) {
         if (toRow < 0 || toRow >= mazeRows || toCol < 0 || toCol >= mazeCols) return false;
         for (int[] nb : maze.getNeighbors(fromRow, fromCol)) {
@@ -334,6 +353,17 @@ public class GameController {
             notifyStatus("Coin collected! +25 XP. Total coins: " + player.getCoins());
         }
 
+        // ---- 道具拾取 ----
+        if (itemCells.contains(cell)) {
+            Item.ItemType type = itemCellTypes.get(cell);
+            if (type != null) {
+                player.addItem(type);
+                itemCells.remove(cell);
+                notifyStatus("Picked up: " + type.icon + " " + type.displayName
+                        + "! Press " + itemKeyHint(type) + " to use.");
+            }
+        }
+
         // Trap trigger: push player back
         if (trapCells.contains(cell)) {
             trapCells.remove(cell);
@@ -351,6 +381,16 @@ public class GameController {
         }
     }
 
+    /** 返回道具对应的快捷键提示 */
+    private String itemKeyHint(Item.ItemType type) {
+        switch (type) {
+            case SPEED_BOOST: return "[1]";
+            case WALL_PASS:   return "[2]";
+            case ATTACK:      return "[3]";
+            default:          return "[?]";
+        }
+    }
+
     /** Process all events up to current tick. */
     private void processEvents() {
         while (!eventQueue.isEmpty() && eventQueue.peek().getTick() <= currentTick) {
@@ -358,8 +398,7 @@ public class GameController {
 
             switch (event.getType()) {
                 case LEVEL_UP -> {
-                    notifyStatus("LEVEL UP! You are now level " + player.getLevel() +
-                            ". Check your skills!");
+                    notifyStatus("LEVEL UP! You are now level " + player.getLevel() + "!");
                 }
                 case GAME_WIN -> {
                     for (GameEventListener l : listeners) {
@@ -368,116 +407,87 @@ public class GameController {
                 }
                 case HINT_EXPIRE -> {
                     hintPath = new ArrayList<>();
-                    player.activatePathHint(false);
                     notifyStatus("Path hint expired.");
                     notifyUpdate();
                 }
-                case SKILL_EXPIRE -> {
-                    String skillName = event.getData();
-                    if ("SPEED_BOOST".equals(skillName)) {
+                case ITEM_EXPIRE -> {
+                    // 处理道具效果到期
+                    String itemName = event.getData();
+                    if ("SPEED_BOOST".equals(itemName)) {
                         player.activateSpeedBoost(false);
                         notifyStatus("Speed boost expired.");
-                    } else if ("VISION".equals(skillName)) {
-                        player.activateVision(false);
-                        notifyStatus("Eagle vision expired.");
                     }
                     notifyUpdate();
                 }
                 case ENEMY_MOVE -> {
                     // Enemy movement is processed in updateEnemies()
-                    // This event is used for scheduling via PriorityQueue ADT
                 }
                 default -> { }
             }
         }
     }
 
-    // ==================== Skills ====================
+    // ==================== 道具使用 ====================
 
-    /** Use a skill by type. */
-    public void useSkill(Skill.SkillType type) {
+    /**
+     * 使用道具。由键盘输入 1/2/3 触发。
+     * @param type 道具类型
+     */
+    public void useItem(Item.ItemType type) {
         if (state != GameState.PLAYING) return;
 
-        ListInterface<Skill> skills = player.getAllSkills();
-        Skill target = null;
-        for (Skill s : skills) {
-            if (s.getType() == type) { target = s; break; }
-        }
-
-        if (target == null || !target.canUse()) {
-            notifyStatus("Skill not available!");
+        // 检查玩家背包中是否有该道具
+        if (player.getItemCount(type) <= 0) {
+            notifyStatus("You don't have " + type.displayName + "!");
             return;
         }
 
-        target.use();
-
         switch (type) {
             case SPEED_BOOST -> {
+                if (player.isSpeedBoostActive()) {
+                    notifyStatus("Speed boost is already active!");
+                    return;
+                }
+                player.useItem(type);
                 player.activateSpeedBoost(true);
+                // 10 步后到期
                 eventQueue.enqueue(new GameEvent(
-                        GameEvent.EventType.SKILL_EXPIRE, currentTick + 10, "SPEED_BOOST"));
-                notifyStatus("Speed Boost activated for 10 moves!");
+                        GameEvent.EventType.ITEM_EXPIRE, currentTick + 10, "SPEED_BOOST"));
+                notifyStatus("⚡ Speed Boost activated! Move 2 cells for 10 moves!");
             }
-            case PATH_HINT -> {
-                hintPath = PathFinder.findShortestPath(maze, player.getCellKey(), exitCell);
-                player.activatePathHint(true);
-                eventQueue.enqueue(new GameEvent(
-                        GameEvent.EventType.HINT_EXPIRE, currentTick + 15, ""));
-                notifyStatus("Path hint activated! Shortest path shown for 15 moves.");
+            case WALL_PASS -> {
+                if (player.isWallPassActive()) {
+                    notifyStatus("Wall pass is already ready! Move towards a wall to use it.");
+                    return;
+                }
+                player.useItem(type);
+                player.activateWallPass(true);
+                notifyStatus("🧱 Wall Pass ready! Move towards a wall to phase through it!");
             }
-            case VISION -> {
-                player.activateVision(true);
-                eventQueue.enqueue(new GameEvent(
-                        GameEvent.EventType.SKILL_EXPIRE, currentTick + 8, "VISION"));
-                notifyStatus("Eagle Vision activated! Vision radius expanded for 8 moves.");
-            }
-            case BACKTRACK -> {
-                player.quickBacktrack(5);
-                notifyStatus("Quick Backtrack! Rewound 5 moves.");
-            }
-            case WALL_BREAK -> {
-                notifyStatus("Wall Break ready! Click a wall adjacent to you to destroy it.");
-                // Wall breaking is handled in the view layer on click
-            }
-            case TELEPORT -> {
-                teleportToRandom();
-                notifyStatus("Teleported to a random location!");
+            case ATTACK -> {
+                player.useItem(type);
+                // 眩晕范围内的所有敌人
+                int stunCount = 0;
+                int pr = player.getRow();
+                int pc = player.getCol();
+                for (Enemy enemy : enemies) {
+                    int dist = Math.abs(enemy.getRow() - pr) + Math.abs(enemy.getCol() - pc);
+                    if (dist <= Player.ATTACK_RADIUS && !enemy.isStunned()) {
+                        enemy.stun(8);
+                        stunCount++;
+                    }
+                }
+                if (stunCount > 0) {
+                    notifyStatus("⚔ Attack! Stunned " + stunCount + " enem"
+                            + (stunCount == 1 ? "y" : "ies") + " for 8 ticks!");
+                } else {
+                    notifyStatus("⚔ Attack! No enemies in range (radius "
+                            + Player.ATTACK_RADIUS + ").");
+                }
             }
         }
 
         notifyUpdate();
-    }
-
-    /** Teleport player to a random cell. */
-    private void teleportToRandom() {
-        Random rng = new Random();
-        int r = rng.nextInt(mazeRows);
-        int c = rng.nextInt(mazeCols);
-        player.moveTo(r, c);
-    }
-
-    /**
-     * Attempt to break the wall between the player and an adjacent cell (r, c).
-     * In main 2's maze model, walls are between cells (not cell-obstacles),
-     * so (r, c) is the target cell the player wants to reach, not a wall cell.
-     */
-    public boolean breakWall(int r, int c) {
-        int playerRow = player.getRow();
-        int playerCol = player.getCol();
-        int dr = Math.abs(r - playerRow);
-        int dc = Math.abs(c - playerCol);
-        // Must be exactly adjacent (Manhattan distance = 1)
-        if (dr + dc != 1) return false;
-        // Must be in bounds
-        if (r < 0 || r >= mazeRows || c < 0 || c >= mazeCols) return false;
-        // Must currently be blocked (wall exists between player and target)
-        if (isPassable(playerRow, playerCol, r, c)) return false;
-
-        // Remove the wall between player's cell and (r, c)
-        maze.removeWall(playerRow, playerCol, r, c);
-        notifyStatus("Wall destroyed!");
-        notifyUpdate();
-        return true;
     }
 
     // ==================== Notifications ====================
@@ -499,6 +509,8 @@ public class GameController {
     public String getExitCell() { return exitCell; }
     public SetInterface<String> getCoinCells() { return coinCells; }
     public SetInterface<String> getTrapCells() { return trapCells; }
+    public SetInterface<String> getItemCells() { return itemCells; }
+    public Implementation.HashMap<Item.ItemType> getItemCellTypes() { return itemCellTypes; }
     public ListInterface<String> getHintPath() { return hintPath; }
     public String getStatusMessage() { return statusMessage; }
     public int getCurrentTick() { return currentTick; }

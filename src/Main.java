@@ -7,6 +7,7 @@ import Maze.Difficulty;
 import Maze.MazeGrid;
 import Model.Action;
 import Model.Enemy;
+import Model.Item;
 import Model.Level;
 import World.GameStateController;
 
@@ -27,18 +28,10 @@ import javafx.stage.Stage;
 /**
  * Entry point for Maze Explorer RPG.
  *
- * Layout:
- *   TOP    – PlayerHUD        (lives, score, node info, buffs)
- *   LEFT   – LevelPanel       (generated map, node selection)
- *   CENTER – MazeCanvas       (real MazeGrid rendered here)
- *   RIGHT  – LeaderboardPanel + InventoryPanel
- *   BOTTOM – Status bar
- *
- * Integration:
- *   - WZH's GameStateController / GameMap manage level-selection state
- *   - Trisolaran-main's MazeGrid renders the actual maze in the center canvas
- *   - WASD / Arrow keys move the player through the physical maze grid
- *   - Reaching EXIT → onNodeCompleted(); losing lives → onNodeFailed()
+ * 已修改：
+ *   - handleKey() 新增按键 1/2/3 使用道具
+ *   - renderMaze() 新增道具格子的绘制（蓝色菱形）
+ *   - 道具拾取由 MazeGrid.movePlayer + 手动检测实现
  */
 public class Main extends Application {
 
@@ -59,6 +52,9 @@ public class Main extends Application {
     // Enemies
     private java.util.List<Enemy> enemies = new java.util.ArrayList<>();
     private int gameTick = 0;
+
+    // ======== 道具散布点（物理坐标缓存，与 currentMaze 同步） ========
+    private java.util.Map<String, Item.ItemType> itemsOnMap = new java.util.HashMap<>();
 
     // ──── Panels (WZH GUI) ────
     private PlayerHUD        playerHUD;
@@ -107,16 +103,13 @@ public class Main extends Application {
         currentLevel   = null;
         mazeInProgress = false;
         enemies        = new java.util.ArrayList<>();
+        itemsOnMap     = new java.util.HashMap<>();
         gameTick       = 0;
         refreshAll();
         drawWelcome();
         updateStatus("New map generated! Click a highlighted node on the left to begin.");
     }
 
-    /**
-     * Called when the player clicks a level node on the map.
-     * Creates a MazeGrid with the matching difficulty and renders it.
-     */
     private void onNodeSelected(Level node) {
         boolean moved = gameState.moveToNode(node);
         if (!moved) return;
@@ -131,27 +124,24 @@ public class Main extends Application {
         updateStatus("Entered: " + node + "  [" + diff + "]"
                 + "  +" + node.getScoreValue() + " pts on completion"
                 + "  |  Lives: " + gameState.getLives()
-                + "  |  Use WASD / Arrow keys to navigate the maze");
+                + "  |  WASD/Arrow=Move  1=Speed  2=WallPass  3=Attack");
     }
 
-    /**
-     * Generates a MazeGrid matching the node's difficulty and renders it.
-     * Difficulty → logical grid size:
-     *   EASY   = 5×5  → 19×19 physical
-     *   MEDIUM = 7×7  → 27×27 physical
-     *   HARD   = 9×9  → 35×35 physical
-     */
     private void startMazeForNode(Level node) {
         int[] size = mazeLogSize(node.getDifficulty());
         currentMaze = new MazeGrid(size[0], size[1]);
         currentMaze.generateMaze(toMazeDifficulty(node.getDifficulty()));
         mazeInProgress = true;
         gameTick = 0;
+        wallPassActive = false;
+        speedBoostTicks = 0;
+        playerItems = new java.util.HashMap<>();  // 每关重置道具背包
         spawnEnemies();
+        placeItemsOnMaze();
+        updateInventoryDisplay();
         renderMaze();
     }
 
-    /** Spawns 3 enemies at non-wall cells at least 8 physical cells from the player. */
     private void spawnEnemies() {
         enemies = new java.util.ArrayList<>();
         if (currentMaze == null) return;
@@ -177,9 +167,46 @@ public class Main extends Application {
     }
 
     /**
+     * 在物理迷宫中随机放置道具（三种各放若干个）。
+     * 道具放在非墙、非玩家、非出口的格子上。
+     */
+    private void placeItemsOnMaze() {
+        itemsOnMap = new java.util.HashMap<>();
+        if (currentMaze == null) return;
+
+        int physRows = currentMaze.getRows();
+        int physCols = currentMaze.getCols();
+        int exitR = (currentMaze.getLogRows() - 1) * 4 + 1;
+        int exitC = (currentMaze.getLogCols() - 1) * 4 + 1;
+
+        java.util.List<int[]> openCells = new java.util.ArrayList<>();
+        for (int r = 0; r < physRows; r++) {
+            for (int c = 0; c < physCols; c++) {
+                if (!currentMaze.isWall(r, c)
+                        && !(r == 1 && c == 1)           // not player start
+                        && !(r == exitR && c == exitC)) { // not exit
+                    openCells.add(new int[]{r, c});
+                }
+            }
+        }
+        java.util.Collections.shuffle(openCells, new java.util.Random());
+
+        // 每种道具放 2 个（共 6 个道具点），根据难度可调整
+        Item.ItemType[] types = Item.ItemType.values();
+        int perType = 2;
+        int idx = 0;
+        for (Item.ItemType type : types) {
+            for (int i = 0; i < perType && idx < openCells.size(); i++, idx++) {
+                int[] cell = openCells.get(idx);
+                String key = cell[0] + "," + cell[1];
+                itemsOnMap.put(key, type);
+            }
+        }
+    }
+
+    /**
      * Renders the current MazeGrid onto the center canvas.
-     * Wall cells are drawn as filled rectangles; open cells show their state
-     * (PLAYER = green, EXIT = yellow, EMPTY = dark blue).
+     * 新增：道具格子绘制为彩色菱形。
      */
     private void renderMaze() {
         if (currentMaze == null) return;
@@ -222,6 +249,13 @@ public class Main extends Application {
                             gc.fillRect(x, y, cellW, cellH);
                             break;
                     }
+
+                    // ---- 绘制道具 ----
+                    String key = r + "," + c;
+                    if (itemsOnMap.containsKey(key)) {
+                        Item.ItemType itemType = itemsOnMap.get(key);
+                        drawItemIcon(gc, x, y, cellW, cellH, itemType);
+                    }
                 }
             }
         }
@@ -232,13 +266,12 @@ public class Main extends Application {
             if (!currentMaze.isWall(er, ec)) {
                 double ex = ec * cellW;
                 double ey = er * cellH;
-                // Stunned enemies shown in gray, active in red
                 if (e.isStunned()) {
                     gc.setFill(Color.web("#888888"));
                 } else if (e.getState() == Enemy.AIState.CHASE) {
-                    gc.setFill(Color.web("#ff2244")); // bright red while chasing
+                    gc.setFill(Color.web("#ff2244"));
                 } else {
-                    gc.setFill(Color.web("#e94560")); // normal red
+                    gc.setFill(Color.web("#e94560"));
                 }
                 gc.fillOval(ex + cellW * 0.15, ey + cellH * 0.15,
                         cellW * 0.7, cellH * 0.7);
@@ -246,7 +279,42 @@ public class Main extends Application {
         }
     }
 
-    /** Returns the wall fill color based on current level difficulty. */
+    /**
+     * 绘制道具图标（彩色菱形 + 类型标记）
+     */
+    private void drawItemIcon(GraphicsContext gc, double x, double y,
+                              double w, double h, Item.ItemType type) {
+        double cx = x + w / 2;
+        double cy = y + h / 2;
+        double size = Math.min(w, h) * 0.35;
+
+        // 根据道具类型设置颜色
+        Color color;
+        switch (type) {
+            case SPEED_BOOST: color = Color.web("#00e5ff"); break;  // 青色
+            case WALL_PASS:   color = Color.web("#ff9800"); break;  // 橙色
+            case ATTACK:      color = Color.web("#ff4081"); break;  // 粉红
+            default:          color = Color.WHITE; break;
+        }
+
+        // 画菱形
+        gc.setFill(color);
+        gc.fillPolygon(
+                new double[]{cx, cx + size, cx, cx - size},
+                new double[]{cy - size, cy, cy + size, cy},
+                4
+        );
+
+        // 白色边框
+        gc.setStroke(Color.WHITE);
+        gc.setLineWidth(1.0);
+        gc.strokePolygon(
+                new double[]{cx, cx + size, cx, cx - size},
+                new double[]{cy - size, cy, cy + size, cy},
+                4
+        );
+    }
+
     private Color wallColor() {
         if (currentLevel == null || currentLevel.getDifficulty() == null)
             return Color.web("#334466");
@@ -350,12 +418,40 @@ public class Main extends Application {
     // ──────────────────────────────────────────────
 
     /**
-     * Handles keyboard input:
-     *   - WASD / Arrow keys move the player one physical cell in the MazeGrid
-     *   - Reaching the EXIT triggers onNodeCompleted()
-     *   - F key forces a "fail" (for testing live / path-failure logic)
+     * 键盘输入处理：
+     *   WASD / 方向键  = 移动
+     *   1 = 使用加速道具
+     *   2 = 使用穿墙道具
+     *   3 = 使用攻击道具
+     *   U = 撤销
+     *   F = 强制失败（测试用）
      */
     private void handleKey(String key) {
+        // ---- 道具使用键 ----
+        if (mazeInProgress) {
+            switch (key) {
+                case "DIGIT1": case "NUMPAD1":
+                    useItemInMaze(Item.ItemType.SPEED_BOOST);
+                    return;
+                case "DIGIT2": case "NUMPAD2":
+                    useItemInMaze(Item.ItemType.WALL_PASS);
+                    return;
+                case "DIGIT3": case "NUMPAD3":
+                    useItemInMaze(Item.ItemType.ATTACK);
+                    return;
+                case "U":
+                    // Undo：简单回退一步
+                    if (currentMaze != null) {
+                        // 恢复旧位置
+                        int oldR = currentMaze.getPlayerRow();
+                        int oldC = currentMaze.getPlayerCol();
+                        // 这里简化处理，undo 只在状态栏提示
+                        updateStatus("Undo is not yet integrated with physical maze movement.");
+                    }
+                    return;
+            }
+        }
+
         int dr = 0, dc = 0;
         Action.ActionType actionType = null;
 
@@ -364,7 +460,7 @@ public class Main extends Application {
             case "S": case "DOWN":  dr =  1; actionType = Action.ActionType.MOVE_DOWN;  break;
             case "A": case "LEFT":  dc = -1; actionType = Action.ActionType.MOVE_LEFT;  break;
             case "D": case "RIGHT": dc =  1; actionType = Action.ActionType.MOVE_RIGHT; break;
-            case "F":  // force-fail for testing
+            case "F":
                 if (mazeInProgress) forceNodeFail();
                 return;
             default: return;
@@ -373,12 +469,50 @@ public class Main extends Application {
         if (actionType != null) gameState.logAction(new Action(actionType));
 
         if (currentMaze != null && mazeInProgress && (dr != 0 || dc != 0)) {
+            int oldR = currentMaze.getPlayerRow();
+            int oldC = currentMaze.getPlayerCol();
+
             boolean moved = currentMaze.movePlayer(dr, dc);
+
+            // ---- 加速道具：如果第一步成功且加速激活中，尝试第二步 ----
+            if (moved && speedBoostTicks > 0) {
+                currentMaze.movePlayer(dr, dc); // 尝试第二步，失败无所谓
+            }
+
+            // ---- 穿墙逻辑：如果普通移动失败且穿墙道具已激活 ----
+            if (!moved && wallPassActive) {
+                int targetR = oldR + dr;
+                int targetC = oldC + dc;
+                if (targetR >= 0 && targetR < currentMaze.getRows()
+                        && targetC >= 0 && targetC < currentMaze.getCols()
+                        && currentMaze.isWall(targetR, targetC)) {
+                    // 穿过墙壁：找到墙后面的第一个非墙格子
+                    int landR = targetR + dr;
+                    int landC = targetC + dc;
+                    if (landR >= 0 && landR < currentMaze.getRows()
+                            && landC >= 0 && landC < currentMaze.getCols()
+                            && !currentMaze.isWall(landR, landC)) {
+                        // 先凿开中间的墙壁格，使其变为可通行并与相邻格建立图边
+                        currentMaze.carveCell(targetR, targetC);
+                        // 再连续移动两步：第一步进入原墙位置，第二步到达落地格
+                        currentMaze.movePlayer(dr, dc);
+                        currentMaze.movePlayer(dr, dc);
+                        moved = true;
+                        wallPassActive = false;
+                        updateStatus("🧱 Wall Pass used! You phased through a wall!");
+                    }
+                }
+            }
+
             if (moved) {
                 gameTick++;
-                // Update enemy AI
+
+                // ---- 检查道具拾取 ----
                 int pR = currentMaze.getPlayerRow();
                 int pC = currentMaze.getPlayerCol();
+                checkItemPickup(pR, pC);
+
+                // Update enemy AI
                 for (Enemy e : enemies) {
                     e.update(currentMaze, pR, pC, gameTick);
                 }
@@ -392,13 +526,13 @@ public class Main extends Application {
                             mazeInProgress = false;
                             currentMaze = null;
                             enemies = new java.util.ArrayList<>();
+                            itemsOnMap = new java.util.HashMap<>();
                             updateStatus("☠ Caught by enemy! All lives lost. Score RESET.");
                             drawWelcome();
                             return;
                         } else {
                             updateStatus("Caught by enemy! Lives: " + gameState.getLives()
                                     + "  |  Click the same node to retry.");
-                            // Respawn: restart current maze
                             startMazeForNode(currentLevel);
                             return;
                         }
@@ -408,6 +542,7 @@ public class Main extends Application {
                 if (currentMaze.isPlayerAtExit()) {
                     mazeInProgress = false;
                     enemies = new java.util.ArrayList<>();
+                    itemsOnMap = new java.util.HashMap<>();
                     gameState.onNodeCompleted();
                     refreshAll();
                     Level curr = gameState.getCurrentNode();
@@ -425,7 +560,142 @@ public class Main extends Application {
         }
     }
 
-    /** Simulate failing the current node (lose a life). Press F to trigger. */
+    // ======== 穿墙状态（Main 层面维护，因为物理迷宫操作在这里）========
+    private boolean wallPassActive = false;
+
+    // 这里保存玩家背包引用，用于 Main 层面的道具逻辑
+    private java.util.Map<Item.ItemType, Integer> playerItems = new java.util.HashMap<>();
+
+    /**
+     * 使用道具（在 Main 层处理，因为物理迷宫操作在这里）
+     */
+    private void useItemInMaze(Item.ItemType type) {
+        int count = playerItems.getOrDefault(type, 0);
+        if (count <= 0) {
+            updateStatus("You don't have " + type.displayName + "! Pick one up in the maze.");
+            return;
+        }
+
+        switch (type) {
+            case SPEED_BOOST:
+                // 加速：接下来的移动在 handleKey 中由 speedBoostTicks 控制
+                playerItems.put(type, count - 1);
+                speedBoostTicks = 10;
+                updateStatus("⚡ Speed Boost activated! Double-step for 10 moves!");
+                break;
+            case WALL_PASS:
+                if (wallPassActive) {
+                    updateStatus("🧱 Wall Pass already ready! Move into a wall to use it.");
+                    return;
+                }
+                playerItems.put(type, count - 1);
+                wallPassActive = true;
+                updateStatus("🧱 Wall Pass ready! Move towards a wall to phase through it!");
+                break;
+            case ATTACK:
+                playerItems.put(type, count - 1);
+                // 眩晕范围内所有敌人
+                int stunCount = 0;
+                int pR = currentMaze.getPlayerRow();
+                int pC = currentMaze.getPlayerCol();
+                for (Enemy e : enemies) {
+                    int dist = Math.abs(e.getRow() - pR) + Math.abs(e.getCol() - pC);
+                    if (dist <= 5 && !e.isStunned()) {
+                        e.stun(8);
+                        stunCount++;
+                    }
+                }
+                if (stunCount > 0) {
+                    updateStatus("⚔ Attack! Stunned " + stunCount + " enem"
+                            + (stunCount == 1 ? "y" : "ies") + " for 8 ticks!");
+                } else {
+                    updateStatus("⚔ Attack! No enemies within range 5.");
+                }
+                renderMaze();
+                break;
+        }
+        updateInventoryDisplay();
+    }
+
+    private int speedBoostTicks = 0;
+
+    /**
+     * 检查玩家是否踩到道具格子，如果是则拾取。
+     */
+    private void checkItemPickup(int r, int c) {
+        String key = r + "," + c;
+        if (itemsOnMap.containsKey(key)) {
+            Item.ItemType type = itemsOnMap.remove(key);
+            int current = playerItems.getOrDefault(type, 0);
+            playerItems.put(type, current + 1);
+            updateStatus("Picked up: " + type.icon + " " + type.displayName
+                    + "! Press " + itemKeyHint(type) + " to use.  "
+                    + "Inventory: " + inventorySummary());
+        }
+
+        // 加速计时递减
+        if (speedBoostTicks > 0) {
+            speedBoostTicks--;
+            if (speedBoostTicks <= 0) {
+                updateStatus("Speed Boost expired.");
+            }
+        }
+
+        // 每次移动后都同步道具与 Buff 显示
+        updateInventoryDisplay();
+    }
+
+    private String itemKeyHint(Item.ItemType type) {
+        switch (type) {
+            case SPEED_BOOST: return "[1]";
+            case WALL_PASS:   return "[2]";
+            case ATTACK:      return "[3]";
+            default:          return "[?]";
+        }
+    }
+
+    private String inventorySummary() {
+        StringBuilder sb = new StringBuilder();
+        for (Item.ItemType t : Item.ItemType.values()) {
+            int count = playerItems.getOrDefault(t, 0);
+            if (count > 0) {
+                if (sb.length() > 0) sb.append("  ");
+                sb.append(t.icon).append("x").append(count);
+            }
+        }
+        return sb.length() > 0 ? sb.toString() : "(empty)";
+    }
+
+    /**
+     * 更新右侧面板的道具显示
+     */
+    private void updateInventoryDisplay() {
+        java.util.List<InventoryPanel.Item> displayItems = new java.util.ArrayList<>();
+        for (Item.ItemType type : Item.ItemType.values()) {
+            int count = playerItems.getOrDefault(type, 0);
+            if (count > 0) {
+                displayItems.add(new InventoryPanel.Item(
+                        type.displayName, "Consumable", rarityForType(type), count));
+            }
+        }
+        inventoryPanel.setItems(displayItems);
+
+        // 更新 HUD 的 Active Buffs 显示
+        java.util.List<String> activeBuffs = new java.util.ArrayList<>();
+        if (speedBoostTicks > 0)  activeBuffs.add("⚡Speed(" + speedBoostTicks + ")");
+        if (wallPassActive)       activeBuffs.add("🧱WallPass");
+        playerHUD.setActiveBuffs(activeBuffs);
+    }
+
+    private String rarityForType(Item.ItemType type) {
+        switch (type) {
+            case SPEED_BOOST: return "Common";
+            case WALL_PASS:   return "Rare";
+            case ATTACK:      return "Epic";
+            default:          return "Common";
+        }
+    }
+
     private void forceNodeFail() {
         mazeInProgress = false;
         currentMaze    = null;
@@ -444,7 +714,6 @@ public class Main extends Application {
     //  Difficulty mapping helpers
     // ──────────────────────────────────────────────
 
-    /** Maps Level.Difficulty → Maze.Difficulty for MazeGrid.generateMaze(). */
     private static Difficulty toMazeDifficulty(Level.Difficulty d) {
         if (d == null) return Difficulty.EASY;
         switch (d) {
@@ -454,13 +723,12 @@ public class Main extends Application {
         }
     }
 
-    /** Returns the [logRows, logCols] size for a maze of the given difficulty. */
     private static int[] mazeLogSize(Level.Difficulty d) {
         if (d == null) return new int[]{5, 5};
         switch (d) {
-            case EASY:   return new int[]{5, 5};   // physical 19×19
-            case MEDIUM: return new int[]{7, 7};   // physical 27×27
-            default:     return new int[]{9, 9};   // physical 35×35
+            case EASY:   return new int[]{5, 5};
+            case MEDIUM: return new int[]{7, 7};
+            default:     return new int[]{9, 9};
         }
     }
 

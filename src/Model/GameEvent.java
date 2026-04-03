@@ -3,13 +3,18 @@ package Model;
 /**
  * GameEvent - Represents a timed event in the game, processed by the PriorityQueue.
  * Events with lower tick values are processed first (higher priority).
+ *
+ * 已修改：
+ *   - SKILL_EXPIRE 重命名为 ITEM_EXPIRE（道具效果到期）
+ *   - 新增 ITEM_PICKUP 事件类型
  */
 public class GameEvent implements Comparable<GameEvent> {
 
     public enum EventType {
         COLLECT_COIN,       // Player collects a coin
         ENEMY_MOVE,         // Enemy patrol moves
-        SKILL_EXPIRE,       // A temporary skill buff expires
+        ITEM_EXPIRE,        // A temporary item buff expires (was SKILL_EXPIRE)
+        ITEM_PICKUP,        // Player picks up an item
         DOOR_OPEN,          // A locked door opens
         LEVEL_UP,           // Player levels up
         FOG_REVEAL,         // Reveal fog around player
@@ -38,10 +43,8 @@ public class GameEvent implements Comparable<GameEvent> {
 
     @Override
     public int compareTo(GameEvent other) {
-        // Lower tick = higher priority (processed sooner)
         int cmp = Integer.compare(this.tick, other.tick);
         if (cmp != 0) return cmp;
-        // Tie-break by event type ordinal
         return Integer.compare(this.type.ordinal(), other.type.ordinal());
     }
 

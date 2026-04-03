@@ -2,18 +2,17 @@ package Model;
 
 import Implementation.ArrayList;
 import Implementation.LinkedStack;
-import Implementation.SkillTreeBST;
 import Interface.ListInterface;
-import Model.Skill.SkillType;
 
 /**
  * Player - The player character controlled by keyboard input.
  * Tracks position, movement history (via Stack), level, experience,
- * and skills (via BST).
+ * and items (via ArrayList).
  *
  * 已修改：
- *   - 使用自定义 ArrayList / ListInterface 替代 java.util.List
- *   - 手动循环替代 stream().filter().toList()
+ *   - 移除 SkillTreeBST 技能树，改用 ArrayList<Item> 道具背包
+ *   - 新增穿墙 (wallPassActive) 状态
+ *   - 新增攻击范围常量
  */
 public class Player {
 
@@ -30,18 +29,20 @@ public class Player {
     // Movement history for undo (Stack ADT)
     private final LinkedStack<int[]> moveHistory;
 
-    // Skill tree (BST ADT)
-    private final SkillTreeBST<Integer, Skill> skillTree;
+    // ======== 道具背包 (ArrayList ADT) ========
+    private final ArrayList<Item> inventory;
 
     // Active buffs
     private boolean speedBoostActive;
-    private boolean pathHintActive;
-    private boolean visionActive;
+    private boolean wallPassActive;     // 穿墙激活状态（仅一次）
+
+    // Vision
     private int visionRadius;
 
     // Constants
     private static final int BASE_VISION_RADIUS = 2;
     private static final int EXP_PER_LEVEL = 100;
+    public  static final int ATTACK_RADIUS = 5;   // 攻击道具影响范围（曼哈顿距离）
 
     public Player(int startRow, int startCol) {
         this.row = startRow;
@@ -51,16 +52,10 @@ public class Player {
         this.coins = 0;
         this.moveCount = 0;
         this.moveHistory = new LinkedStack<>();
-        this.skillTree = new SkillTreeBST<>();
+        this.inventory = new ArrayList<>();
         this.visionRadius = BASE_VISION_RADIUS;
         this.speedBoostActive = false;
-        this.pathHintActive = false;
-        this.visionActive = false;
-
-        // Initialize skill tree with all skills (sorted by level requirement)
-        for (SkillType st : SkillType.values()) {
-            skillTree.insert(st.levelRequired * 10 + st.ordinal(), new Skill(st));
-        }
+        this.wallPassActive = false;
     }
 
     // ==================== Movement ====================
@@ -104,21 +99,9 @@ public class Player {
         if (experience >= level * EXP_PER_LEVEL) {
             experience -= level * EXP_PER_LEVEL;
             level++;
-            unlockSkillsForLevel();
             return true;
         }
         return false;
-    }
-
-    /** Unlock all skills whose requirement <= current level. */
-    private void unlockSkillsForLevel() {
-        // key = levelRequired * 10 + ordinal, so threshold = level * 10 + 9
-        ListInterface<Skill> available = skillTree.getUpTo(level * 10 + 9);
-        for (Skill s : available) {
-            if (!s.isUnlocked()) {
-                s.unlock();
-            }
-        }
     }
 
     /** Collect a coin. */
@@ -127,39 +110,69 @@ public class Player {
         addExperience(25);
     }
 
-    // ==================== Skills ====================
+    // ==================== 道具系统 ====================
 
-    /** Get all skills (sorted by level requirement via in-order traversal). */
-    public ListInterface<Skill> getAllSkills() {
-        return skillTree.inOrderTraversal();
-    }
-
-    /** Get unlocked skills. 手动循环替代 stream().filter().toList() */
-    public ListInterface<Skill> getUnlockedSkills() {
-        ListInterface<Skill> available = skillTree.getUpTo(level * 10 + 9);
-        ArrayList<Skill> unlocked = new ArrayList<>();
-        for (Skill s : available) {
-            if (s.isUnlocked()) {
-                unlocked.add(s);
+    /**
+     * 添加道具到背包。如果已有同类道具则叠加数量。
+     * 使用 ArrayList 遍历查找。
+     */
+    public void addItem(Item.ItemType type) {
+        for (int i = 0; i < inventory.size(); i++) {
+            Item existing = inventory.get(i);
+            if (existing.getType() == type) {
+                existing.addQuantity(1);
+                return;
             }
         }
-        return unlocked;
+        // 没有该类型道具，新增
+        inventory.add(new Item(type));
     }
+
+    /**
+     * 使用指定类型的道具。
+     * @return 如果成功使用返回 true
+     */
+    public boolean useItem(Item.ItemType type) {
+        for (int i = 0; i < inventory.size(); i++) {
+            Item item = inventory.get(i);
+            if (item.getType() == type && item.canUse()) {
+                item.use();
+                // 如果数量归零，从背包移除
+                if (item.getQuantity() <= 0) {
+                    inventory.remove(i);
+                }
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /** 获取指定道具的剩余数量 */
+    public int getItemCount(Item.ItemType type) {
+        for (int i = 0; i < inventory.size(); i++) {
+            Item item = inventory.get(i);
+            if (item.getType() == type) {
+                return item.getQuantity();
+            }
+        }
+        return 0;
+    }
+
+    /** 获取所有道具列表（用于 UI 显示） */
+    public ArrayList<Item> getInventory() {
+        return inventory;
+    }
+
+    // ==================== Buff 状态 ====================
 
     /** Activate speed boost. */
     public void activateSpeedBoost(boolean active) {
         this.speedBoostActive = active;
     }
 
-    /** Activate path hint. */
-    public void activatePathHint(boolean active) {
-        this.pathHintActive = active;
-    }
-
-    /** Activate eagle vision. */
-    public void activateVision(boolean active) {
-        this.visionActive = active;
-        this.visionRadius = active ? 5 : BASE_VISION_RADIUS;
+    /** Activate wall pass (穿墙). */
+    public void activateWallPass(boolean active) {
+        this.wallPassActive = active;
     }
 
     // ==================== Getters ====================
@@ -173,7 +186,6 @@ public class Player {
     public int getMoveCount() { return moveCount; }
     public int getVisionRadius() { return visionRadius; }
     public boolean isSpeedBoostActive() { return speedBoostActive; }
-    public boolean isPathHintActive() { return pathHintActive; }
-    public boolean isVisionActive() { return visionActive; }
+    public boolean isWallPassActive() { return wallPassActive; }
     public LinkedStack<int[]> getMoveHistory() { return moveHistory; }
 }
