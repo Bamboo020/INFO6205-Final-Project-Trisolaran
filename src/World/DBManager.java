@@ -1,8 +1,8 @@
 package World;
 
+import Implementation.ArrayList;
+
 import java.sql.*;
-import java.util.ArrayList;
-import java.util.List;
 
 /**
  * Manages all MySQL database operations.
@@ -214,11 +214,9 @@ public class DBManager {
     /**
      * Loads all historical scores from the database in descending order.
      * Called at startup to restore MaxHeap and AVLTree state.
-     *
-     * @return list of ScoreRecord objects, highest score first
      */
-    public List<ScoreRecord> loadAllScores() {
-        List<ScoreRecord> records = new ArrayList<>();
+    public ArrayList<ScoreRecord> loadAllScores() {
+        ArrayList<ScoreRecord> records = new ArrayList<>();
         if (!isConnected()) return records;
 
         try (PreparedStatement stmt = connection.prepareStatement(
@@ -235,6 +233,32 @@ public class DBManager {
             }
         } catch (SQLException e) {
             System.err.println("Failed to load scores: " + e.getMessage());
+        }
+        return records;
+    }
+
+    /**
+     * Loads the top-N scores from the database for the leaderboard display.
+     */
+    public ArrayList<ScoreRecord> loadTopScores(int limit) {
+        ArrayList<ScoreRecord> records = new ArrayList<>();
+        if (!isConnected()) return records;
+
+        try (PreparedStatement stmt = connection.prepareStatement(
+                "SELECT username, score, level_id, played_at "
+                        + "FROM scores ORDER BY score DESC LIMIT ?")) {
+            stmt.setInt(1, limit);
+            ResultSet rs = stmt.executeQuery();
+            while (rs.next()) {
+                records.add(new ScoreRecord(
+                        rs.getString("username"),
+                        rs.getInt("score"),
+                        rs.getInt("level_id"),
+                        rs.getString("played_at")
+                ));
+            }
+        } catch (SQLException e) {
+            System.err.println("Failed to load top scores: " + e.getMessage());
         }
         return records;
     }

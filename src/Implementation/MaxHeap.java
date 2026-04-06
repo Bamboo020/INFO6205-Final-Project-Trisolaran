@@ -53,10 +53,10 @@ public class MaxHeap<T extends Comparable<T>> {
      * Returns a snapshot list of the top-{@code k} elements in descending order.
      * Heap state is fully restored after the call. O(k log n)
      */
-    public java.util.List<T> topK(int k) {
+    public ArrayList<T> topK(int k) {
         k = Math.min(k, size);
-        java.util.List<T> extracted = new java.util.ArrayList<>(k);
-        java.util.List<T> result    = new java.util.ArrayList<>(k);
+        ArrayList<T> extracted = new ArrayList<>(k);
+        ArrayList<T> result    = new ArrayList<>(k);
 
         for (int i = 0; i < k; i++) extracted.add(extractMax());
         for (T item : extracted) { result.add(item); insert(item); }

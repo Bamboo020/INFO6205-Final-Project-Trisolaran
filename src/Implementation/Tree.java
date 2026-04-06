@@ -11,11 +11,11 @@ public class Tree<T> {
 
     private static class Node<T> {
         T data;
-        java.util.List<Node<T>> children;
+        ArrayList<Node<T>> children;
 
         Node(T data) {
             this.data = data;
-            this.children = new java.util.ArrayList<>();
+            this.children = new ArrayList<>();
         }
     }
 
@@ -70,12 +70,12 @@ public class Tree<T> {
      *
      * @throws IllegalArgumentException if node is not found
      */
-    public java.util.List<T> getChildren(T node) {
+    public ArrayList<T> getChildren(T node) {
         Node<T> target = findNode(root, node);
         if (target == null) {
             throw new IllegalArgumentException("Node not found: " + node);
         }
-        java.util.List<T> result = new java.util.ArrayList<>();
+        ArrayList<T> result = new ArrayList<>();
         for (Node<T> child : target.children) {
             result.add(child.data);
         }
@@ -85,8 +85,8 @@ public class Tree<T> {
     /**
      * Returns all values in pre-order (root → children left-to-right). O(n)
      */
-    public java.util.List<T> preOrder() {
-        java.util.List<T> result = new java.util.ArrayList<>();
+    public ArrayList<T> preOrder() {
+        ArrayList<T> result = new ArrayList<>();
         preOrderHelper(root, result);
         return result;
     }
@@ -94,7 +94,7 @@ public class Tree<T> {
     public int     size()    { return size;      }
     public boolean isEmpty() { return size == 0; }
 
-    private void preOrderHelper(Node<T> node, java.util.List<T> result) {
+    private void preOrderHelper(Node<T> node, ArrayList<T> result) {
         if (node == null) return;
         result.add(node.data);
         for (Node<T> child : node.children) preOrderHelper(child, result);

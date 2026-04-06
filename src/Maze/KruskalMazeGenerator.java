@@ -1,12 +1,11 @@
 package Maze;
 
+import Implementation.ArrayList;
 import Implementation.MergeSort;
 import Implementation.UnionFind;
 import Interface.MazeGenerator;
 
-import java.util.ArrayList;
 import java.util.Comparator;
-import java.util.List;
 import java.util.Random;
 
 /**
@@ -36,7 +35,7 @@ public class KruskalMazeGenerator implements MazeGenerator {
         int logCols = maze.getLogCols();
 
         // 1. 枚举所有逻辑内部边，赋随机权重
-        List<Edge> edges = new ArrayList<>();
+        ArrayList<Edge> edges = new ArrayList<>();
         for (int lr = 0; lr < logRows; lr++)
             for (int lc = 0; lc < logCols; lc++) {
                 if (lc + 1 < logCols) edges.add(new Edge(lr, lc, lr, lc + 1, random.nextDouble()));
@@ -44,7 +43,7 @@ public class KruskalMazeGenerator implements MazeGenerator {
             }
 
         // 2. 用手写 MergeSort 按权重升序排序
-        List<Edge> sorted = new MergeSort<Edge>().sortList(edges, Comparator.comparingDouble(e -> e.weight));
+        ArrayList<Edge> sorted = new MergeSort<Edge>().sortList(edges, Comparator.comparingDouble(e -> e.weight));
 
         // 3. 用手写 UnionFind 按 Kruskal 选边，打通 3 格宽走廊
         UnionFind uf = new UnionFind(logRows * logCols);

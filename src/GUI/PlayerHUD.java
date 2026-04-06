@@ -3,6 +3,8 @@ package GUI;
 import Model.Level;
 import World.GameStateController;
 
+import Interface.ListInterface;
+
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.Label;
@@ -12,22 +14,20 @@ import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
 
-import java.util.List;
-
 /**
  * C9 – Player HUD (top bar).
  * Displays lives, accumulated score, current node info, and active buffs.
  */
 public class PlayerHUD extends HBox {
 
-    private static final String BG     = "#16213e";
-    private static final String BORDER = "#0f3460";
-    private static final String RED    = "#e94560";
-    private static final String GOLD   = "#f4d35e";
-    private static final String GREEN  = "#57cc99";
-    private static final String BLUE   = "#4a90d9";
-    private static final String TEXT   = "#a8dadc";
-    private static final String DIM    = "#555555";
+    private static final String BG     = "#13131f";
+    private static final String BORDER = "#383860";
+    private static final String RED    = "#ff6b81";
+    private static final String GOLD   = "#ffd93d";
+    private static final String GREEN  = "#6bcb77";
+    private static final String BLUE   = "#4d96ff";
+    private static final String TEXT   = "#e2e2f0";
+    private static final String DIM    = "#b0b0cc";
 
     private final GameStateController gameState;
 
@@ -49,34 +49,34 @@ public class PlayerHUD extends HBox {
                 + "-fx-border-width: 0 0 2 0;");
 
         titleLabel = new Label("⚔  MAZE EXPLORER RPG");
-        titleLabel.setFont(Font.font("Monospaced", FontWeight.BOLD, 17));
+        titleLabel.setFont(Font.font("Arial", FontWeight.BOLD, 17));
         titleLabel.setTextFill(Color.web(RED));
         titleLabel.setPadding(new Insets(10, 20, 10, 16));
 
         livesLabel = new Label("♥ ♥ ♥");
-        livesLabel.setFont(Font.font("Monospaced", FontWeight.BOLD, 15));
+        livesLabel.setFont(Font.font("Arial", FontWeight.BOLD, 16));
         livesLabel.setTextFill(Color.web(RED));
 
         hpBar = new ProgressBar(1.0);
-        hpBar.setPrefWidth(80); hpBar.setPrefHeight(10);
-        hpBar.setStyle("-fx-accent: " + RED + "; -fx-control-inner-background: #2a1a1a;");
+        hpBar.setPrefWidth(80); hpBar.setPrefHeight(8);
+        hpBar.setStyle("-fx-accent: " + RED + "; -fx-control-inner-background: #2a1a2a;");
 
         VBox livesBox = hudCell(dimLabel("LIVES"), livesLabel, hpBar);
 
         scoreLabel = new Label("0 pts");
-        scoreLabel.setFont(Font.font("Monospaced", FontWeight.BOLD, 15));
+        scoreLabel.setFont(Font.font("Courier New", FontWeight.BOLD, 16));
         scoreLabel.setTextFill(Color.web(GOLD));
         VBox scoreBox = hudCell(dimLabel("PATH SCORE"), scoreLabel);
 
         nodeInfoLabel = new Label("—");
-        nodeInfoLabel.setFont(Font.font("Monospaced", 13));
+        nodeInfoLabel.setFont(Font.font("Arial", FontWeight.BOLD, 13));
         nodeInfoLabel.setTextFill(Color.web(TEXT));
         VBox nodeBox = hudCell(dimLabel("CURRENT NODE"), nodeInfoLabel);
 
         buffBox = new HBox(6);
         buffBox.setAlignment(Pos.CENTER_LEFT);
         Label buffNone = new Label("none");
-        buffNone.setFont(Font.font("Monospaced", 12));
+        buffNone.setFont(Font.font("Arial", 13));
         buffNone.setTextFill(Color.web(DIM));
         buffBox.getChildren().add(buffNone);
         VBox buffSection = hudCell(dimLabel("ACTIVE BUFFS"), buffBox);
@@ -96,11 +96,11 @@ public class PlayerHUD extends HBox {
         refreshNodeInfo();
     }
 
-    public void setActiveBuffs(List<String> buffNames) {
+    public void setActiveBuffs(ListInterface<String> buffNames) {
         buffBox.getChildren().clear();
         if (buffNames == null || buffNames.isEmpty()) {
             Label none = new Label("none");
-            none.setFont(Font.font("Monospaced", 12));
+            none.setFont(Font.font("Arial", 13));
             none.setTextFill(Color.web(DIM));
             buffBox.getChildren().add(none);
             return;
@@ -162,20 +162,20 @@ public class PlayerHUD extends HBox {
 
     private Label dimLabel(String text) {
         Label lbl = new Label(text);
-        lbl.setFont(Font.font("Monospaced", 9));
+        lbl.setFont(Font.font("Arial", FontWeight.BOLD, 10));
         lbl.setTextFill(Color.web(DIM));
         return lbl;
     }
 
     private Label buffChip(String text) {
         Label chip = new Label(text);
-        chip.setFont(Font.font("Monospaced", FontWeight.BOLD, 11));
+        chip.setFont(Font.font("Arial", FontWeight.BOLD, 12));
         chip.setTextFill(Color.web(BLUE));
-        chip.setPadding(new Insets(2, 6, 2, 6));
-        chip.setStyle("-fx-background-color: #0f2a4a;"
+        chip.setPadding(new Insets(2, 8, 2, 8));
+        chip.setStyle("-fx-background-color: #1a2a40;"
                 + "-fx-border-color: " + BLUE + ";"
                 + "-fx-border-width: 1;"
-                + "-fx-background-radius: 8; -fx-border-radius: 8;");
+                + "-fx-background-radius: 10; -fx-border-radius: 10;");
         return chip;
     }
 }

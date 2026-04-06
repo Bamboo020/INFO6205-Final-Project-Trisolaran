@@ -44,7 +44,7 @@ public class LoginPanel extends StackPane {
     private static final String GOLD    = "#f4d35e";
     private static final String ORANGE  = "#f4a261";
     private static final String TEXT    = "#a8dadc";
-    private static final String DIM     = "#555577";
+    private static final String DIM     = "#b0b0cc";
 
     // ------------------------------------------------------------------ //
     //  Fields

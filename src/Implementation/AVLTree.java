@@ -46,8 +46,8 @@ public class AVLTree<K extends Comparable<K>, V> {
      * Returns all values whose keys fall in [lo, hi] inclusive.
      * O(log n + k)
      */
-    public java.util.List<V> rangeQuery(K lo, K hi) {
-        java.util.List<V> result = new java.util.ArrayList<>();
+    public ArrayList<V> rangeQuery(K lo, K hi) {
+        ArrayList<V> result = new ArrayList<>();
         rangeQuery(root, lo, hi, result);
         return result;
     }
@@ -134,7 +134,7 @@ public class AVLTree<K extends Comparable<K>, V> {
         return balance(n);
     }
 
-    private void rangeQuery(Node n, K lo, K hi, java.util.List<V> result) {
+    private void rangeQuery(Node n, K lo, K hi, ArrayList<V> result) {
         if (n == null) return;
         int cmpLo = lo.compareTo(n.key);
         int cmpHi = hi.compareTo(n.key);

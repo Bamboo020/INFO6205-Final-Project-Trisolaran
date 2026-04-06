@@ -2,6 +2,10 @@ package GUI;
 
 import World.GameStateController;
 
+import Implementation.ArrayList;
+import Implementation.MergeSort;
+import Interface.ListInterface;
+
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.Button;
@@ -11,9 +15,6 @@ import javafx.scene.layout.*;
 import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
-
-import java.util.ArrayList;
-import java.util.List;
 
 /**
  * C9 – Inventory panel (bottom section of right sidebar).
@@ -26,20 +27,20 @@ import java.util.List;
  */
 public class InventoryPanel extends VBox {
 
-    private static final String BG      = "#16213e";
-    private static final String BG_CARD = "#0f1e3a";
-    private static final String BG_GUIDE= "#111a33";
-    private static final String BORDER  = "#0f3460";
-    private static final String RED     = "#e94560";
-    private static final String GOLD    = "#f4d35e";
-    private static final String GREEN   = "#57cc99";
-    private static final String BLUE    = "#4a90d9";
-    private static final String PURPLE  = "#9b59b6";
-    private static final String CYAN    = "#00e5ff";
-    private static final String ORANGE  = "#ff9800";
-    private static final String PINK    = "#ff4081";
-    private static final String TEXT    = "#a8dadc";
-    private static final String DIM     = "#555555";
+    private static final String BG      = "#13131f";
+    private static final String BG_CARD = "#1e1e30";
+    private static final String BG_GUIDE= "#1a1a2e";
+    private static final String BORDER  = "#383860";
+    private static final String RED     = "#ff6b81";
+    private static final String GOLD    = "#ffd93d";
+    private static final String GREEN   = "#6bcb77";
+    private static final String BLUE    = "#4d96ff";
+    private static final String PURPLE  = "#bb86fc";
+    private static final String CYAN    = "#43cfff";
+    private static final String ORANGE  = "#ff9f43";
+    private static final String PINK    = "#ff78c4";
+    private static final String TEXT    = "#e2e2f0";
+    private static final String DIM     = "#b0b0cc";
 
     // ──── 道具定义（图标、名称、按键、颜色、描述行1、描述行2）────
     private static final String[][] ITEM_DEFS = {
@@ -66,8 +67,8 @@ public class InventoryPanel extends VBox {
     private final VBox                itemListBox;
     private final Label               countLabel;
 
-    private List<Item> items   = new ArrayList<>();
-    private SortKey    sortKey = SortKey.TYPE;
+    private ArrayList<Item> items   = new ArrayList<>();
+    private SortKey         sortKey = SortKey.TYPE;
 
     public InventoryPanel(GameStateController gameState) {
         this.gameState = gameState;
@@ -80,7 +81,7 @@ public class InventoryPanel extends VBox {
         HBox sortRow = buildSortRow();
 
         countLabel = new Label("0 items");
-        countLabel.setFont(Font.font("Monospaced", 10));
+        countLabel.setFont(Font.font("Arial", 11));
         countLabel.setTextFill(Color.web(DIM));
         countLabel.setPadding(new Insets(2, 10, 2, 10));
 
@@ -113,8 +114,11 @@ public class InventoryPanel extends VBox {
         refresh();
     }
 
-    public void setItems(List<Item> items) {
-        this.items = items != null ? items : new ArrayList<>();
+    public void setItems(ListInterface<Item> items) {
+        this.items = new ArrayList<>();
+        if (items != null) {
+            for (Item item : items) this.items.add(item);
+        }
         refresh();
     }
 
@@ -122,14 +126,14 @@ public class InventoryPanel extends VBox {
         itemListBox.getChildren().clear();
         if (items.isEmpty()) {
             Label empty = new Label("No items yet.\nPick up \u25C6 in the maze!");
-            empty.setFont(Font.font("Monospaced", 11));
+            empty.setFont(Font.font("Arial", 12));
             empty.setTextFill(Color.web(DIM));
             empty.setWrapText(true); empty.setPadding(new Insets(6));
             itemListBox.getChildren().add(empty);
             countLabel.setText("0 items");
             return;
         }
-        List<Item> sorted = sortedItems();
+        ArrayList<Item> sorted = sortedItems();
         countLabel.setText(sorted.size() + " type" + (sorted.size() > 1 ? "s" : ""));
         for (Item item : sorted) itemListBox.getChildren().add(buildItemRow(item));
     }
@@ -179,7 +183,7 @@ public class InventoryPanel extends VBox {
         iconLbl.setFont(Font.font(14));
 
         Label nameLbl = new Label(name);
-        nameLbl.setFont(Font.font("Monospaced", FontWeight.BOLD, 11));
+        nameLbl.setFont(Font.font("Arial", FontWeight.BOLD, 12));
         nameLbl.setTextFill(Color.web(color));
 
         Region sp = new Region();
@@ -187,7 +191,7 @@ public class InventoryPanel extends VBox {
 
         // 快捷键徽章（深色背景，道具色文字）
         Label keyBadge = new Label("[" + key + "]");
-        keyBadge.setFont(Font.font("Monospaced", FontWeight.BOLD, 11));
+        keyBadge.setFont(Font.font("Arial", FontWeight.BOLD, 12));
         keyBadge.setTextFill(Color.web("#0d0d1a"));
         keyBadge.setPadding(new Insets(1, 6, 1, 6));
         keyBadge.setStyle("-fx-background-color: " + color + ";"
@@ -197,12 +201,12 @@ public class InventoryPanel extends VBox {
 
         // 第二行：功能描述
         Label descLbl1 = new Label(desc1);
-        descLbl1.setFont(Font.font("Monospaced", 10));
+        descLbl1.setFont(Font.font("Arial", 11));
         descLbl1.setTextFill(Color.web(TEXT));
 
         // 第三行：附加说明
         Label descLbl2 = new Label(desc2);
-        descLbl2.setFont(Font.font("Monospaced", 9));
+        descLbl2.setFont(Font.font("Arial", 11));
         descLbl2.setTextFill(Color.web(DIM));
 
         card.getChildren().addAll(titleRow, descLbl1, descLbl2);
@@ -215,7 +219,7 @@ public class InventoryPanel extends VBox {
         legend.setPadding(new Insets(8, 0, 0, 0));
 
         Label title = new Label("\u2500\u2500 MAP SYMBOLS \u2500\u2500");
-        title.setFont(Font.font("Monospaced", 9));
+        title.setFont(Font.font("Arial", 11));
         title.setTextFill(Color.web(DIM));
 
         HBox row1 = legendRow("\u25C6", CYAN,   "Speed Boost item");
@@ -235,12 +239,12 @@ public class InventoryPanel extends VBox {
         row.setAlignment(Pos.CENTER_LEFT);
 
         Label symLbl = new Label(symbol);
-        symLbl.setFont(Font.font("Monospaced", FontWeight.BOLD, 11));
+        symLbl.setFont(Font.font("Arial", FontWeight.BOLD, 12));
         symLbl.setTextFill(Color.web(color));
         symLbl.setMinWidth(16);
 
         Label txtLbl = new Label(label);
-        txtLbl.setFont(Font.font("Monospaced", 10));
+        txtLbl.setFont(Font.font("Arial", 11));
         txtLbl.setTextFill(Color.web(TEXT));
 
         row.getChildren().addAll(symLbl, txtLbl);
@@ -251,9 +255,10 @@ public class InventoryPanel extends VBox {
     //  Inventory 已拾取道具行
     // ────────────────────────────────────────
 
-    private List<Item> sortedItems() {
-        List<Item> copy = new ArrayList<>(items);
-        copy.sort((a, b) -> {
+    private ArrayList<Item> sortedItems() {
+        ArrayList<Item> copy = new ArrayList<>();
+        for (Item item : items) copy.add(item);
+        return new MergeSort<Item>().sortList(copy, (a, b) -> {
             switch (sortKey) {
                 case TYPE:     return a.type.compareTo(b.type);
                 case RARITY:   return rarityRank(a.rarity) - rarityRank(b.rarity);
@@ -261,7 +266,6 @@ public class InventoryPanel extends VBox {
                 default:       return 0;
             }
         });
-        return copy;
     }
 
     private int rarityRank(String rarity) {
@@ -285,18 +289,18 @@ public class InventoryPanel extends VBox {
         HBox topLine = new HBox(6); topLine.setAlignment(Pos.CENTER_LEFT);
         Label iconLbl = new Label(itemIcon(item.name)); iconLbl.setFont(Font.font(13));
         Label nameLbl = new Label(item.name);
-        nameLbl.setFont(Font.font("Monospaced", FontWeight.BOLD, 11));
+        nameLbl.setFont(Font.font("Arial", FontWeight.BOLD, 12));
         nameLbl.setTextFill(Color.web(borderColor));
         Region spacer = new Region(); HBox.setHgrow(spacer, Priority.ALWAYS);
         Label qtyLbl = new Label("x" + item.quantity);
-        qtyLbl.setFont(Font.font("Monospaced", FontWeight.BOLD, 12));
+        qtyLbl.setFont(Font.font("Courier New", FontWeight.BOLD, 13));
         qtyLbl.setTextFill(Color.web(GOLD));
         topLine.getChildren().addAll(iconLbl, nameLbl, spacer, qtyLbl);
 
         HBox botLine = new HBox(6); botLine.setAlignment(Pos.CENTER_LEFT);
 
         Label keyLbl = new Label(itemKeyhint(item.name));
-        keyLbl.setFont(Font.font("Monospaced", FontWeight.BOLD, 9));
+        keyLbl.setFont(Font.font("Arial", FontWeight.BOLD, 10));
         keyLbl.setTextFill(Color.web(GREEN));
         keyLbl.setPadding(new Insets(1, 4, 1, 4));
         keyLbl.setStyle("-fx-background-color: #1a3a2a;"
@@ -305,7 +309,7 @@ public class InventoryPanel extends VBox {
                 + "-fx-background-radius: 3;");
 
         Label rarityLbl = new Label(item.rarity);
-        rarityLbl.setFont(Font.font("Monospaced", FontWeight.BOLD, 9));
+        rarityLbl.setFont(Font.font("Arial", FontWeight.BOLD, 10));
         rarityLbl.setTextFill(Color.web(rarityColour(item.rarity)));
         rarityLbl.setPadding(new Insets(1, 4, 1, 4));
         rarityLbl.setStyle("-fx-background-color: transparent;"
@@ -313,7 +317,7 @@ public class InventoryPanel extends VBox {
                 + "-fx-border-width: 1; -fx-border-radius: 3;");
 
         Label descLbl = new Label(itemShortDesc(item.name));
-        descLbl.setFont(Font.font("Monospaced", 9));
+        descLbl.setFont(Font.font("Arial", 11));
         descLbl.setTextFill(Color.web(DIM));
 
         botLine.getChildren().addAll(keyLbl, rarityLbl);
@@ -331,9 +335,9 @@ public class InventoryPanel extends VBox {
         header.setPadding(new Insets(8, 10, 6, 10));
         header.setStyle("-fx-background-color: " + BORDER + ";");
         Label t = new Label(title);
-        t.setFont(Font.font("Monospaced", FontWeight.BOLD, 12)); t.setTextFill(Color.web(RED));
+        t.setFont(Font.font("Courier New", FontWeight.BOLD, 13)); t.setTextFill(Color.web(RED));
         Label s = new Label(subtitle);
-        s.setFont(Font.font("Monospaced", 9)); s.setTextFill(Color.web(DIM));
+        s.setFont(Font.font("Arial", 11)); s.setTextFill(Color.web(DIM));
         header.getChildren().addAll(t, s);
         return header;
     }
@@ -343,7 +347,7 @@ public class InventoryPanel extends VBox {
         row.setPadding(new Insets(6, 10, 4, 10));
         row.setAlignment(Pos.CENTER_LEFT);
         Label sortLbl = new Label("Sort:");
-        sortLbl.setFont(Font.font("Monospaced", 10)); sortLbl.setTextFill(Color.web(DIM));
+        sortLbl.setFont(Font.font("Arial", 11)); sortLbl.setTextFill(Color.web(DIM));
         row.getChildren().addAll(sortLbl, sortBtn("Type", SortKey.TYPE),
                 sortBtn("Rarity", SortKey.RARITY), sortBtn("Qty", SortKey.QUANTITY));
         return row;
@@ -351,7 +355,7 @@ public class InventoryPanel extends VBox {
 
     private Button sortBtn(String label, SortKey key) {
         Button btn = new Button(label);
-        btn.setFont(Font.font("Monospaced", 10)); btn.setPrefHeight(20);
+        btn.setFont(Font.font("Arial", 11)); btn.setPrefHeight(20);
         String col  = TEXT;
         String base = "-fx-background-color:#0f3460;-fx-border-color:" + col
                 + ";-fx-border-width:1;-fx-background-radius:3;-fx-border-radius:3;-fx-cursor:hand;";

@@ -11,12 +11,12 @@ import Interface.HeapInterface;
  */
 public class MinHeap<T extends Comparable<T>> implements HeapInterface<T> {
 
-    private final java.util.List<T> heap;           // 从下标 0 开始存储
-    private final java.util.Map<T, Integer> indexMap; // 元素 -> 堆下标
+    private final ArrayList<T> heap;             // 从下标 0 开始存储
+    private final HashMap<Integer> indexMap;     // 元素 -> 堆下标
 
     public MinHeap() {
-        heap = new java.util.ArrayList<>();
-        indexMap = new java.util.HashMap<>();
+        heap = new ArrayList<>();
+        indexMap = new HashMap<>();
     }
 
     // -------- 公开 API --------

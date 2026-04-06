@@ -1,5 +1,6 @@
 package Implementation;
 
+import Interface.ListInterface;
 import Interface.SortInterface;
 
 import java.util.Comparator;
@@ -33,12 +34,16 @@ public class MergeSort<T> implements SortInterface<T> {
      */
     @Override
     @SuppressWarnings("unchecked")
-    public java.util.List<T> sortList(java.util.List<T> list, Comparator<T> cmp) {
-        if (list == null || list.size() <= 1)
-            return new java.util.ArrayList<>(list == null ? java.util.List.of() : list);
-        T[] arr = (T[]) list.toArray();
+    public ArrayList<T> sortList(ListInterface<T> list, Comparator<T> cmp) {
+        if (list == null || list.size() <= 1) {
+            ArrayList<T> result = new ArrayList<>();
+            if (list != null) for (T item : list) result.add(item);
+            return result;
+        }
+        T[] arr = (T[]) new Object[list.size()];
+        for (int i = 0; i < list.size(); i++) arr[i] = list.get(i);
         sort(arr, cmp);
-        java.util.List<T> result = new java.util.ArrayList<>(arr.length);
+        ArrayList<T> result = new ArrayList<>(arr.length);
         for (T item : arr) result.add(item);
         return result;
     }

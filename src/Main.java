@@ -13,6 +13,9 @@ import World.AuthController;
 import World.DBManager;
 import World.GameStateController;
 
+import Implementation.ArrayList;
+import Implementation.HashMap;
+
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.geometry.Insets;
@@ -28,8 +31,6 @@ import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
 import javafx.stage.Stage;
-
-import java.util.List;
 
 /**
  * Entry point for Maze Explorer RPG.
@@ -67,11 +68,11 @@ public class Main extends Application {
     private boolean  mazeInProgress;
 
     // Enemies
-    private java.util.List<Enemy> enemies = new java.util.ArrayList<>();
+    private ArrayList<Enemy> enemies = new ArrayList<>();
     private int gameTick = 0;
 
     // ──── 道具散布点 ────
-    private java.util.Map<String, Item.ItemType> itemsOnMap = new java.util.HashMap<>();
+    private HashMap<Item.ItemType> itemsOnMap = new HashMap<>();
 
     // ──── Panels (WZH GUI) ────
     private PlayerHUD        playerHUD;
@@ -120,7 +121,7 @@ public class Main extends Application {
     // ──────────────────────────────────────────────
 
     private void loadHistoricalScores() {
-        List<DBManager.ScoreRecord> rows = db.loadAllScores();
+        ArrayList<DBManager.ScoreRecord> rows = db.loadAllScores();
         for (DBManager.ScoreRecord row : rows) {
             gameState.recordScore(row.score,
                     new Model.GameRecord(row.username, row.score, row.levelId, 0L));
@@ -151,14 +152,14 @@ public class Main extends Application {
     private void buildGameScene() {
         playerHUD        = new PlayerHUD(gameState);
         levelPanel       = new LevelPanel(gameState);
-        leaderboardPanel = new LeaderboardPanel(gameState);
+        leaderboardPanel = new LeaderboardPanel(gameState, db);
         inventoryPanel   = new InventoryPanel(gameState);
 
         levelPanel.setOnNodeSelected(this::onNodeSelected);
 
         BorderPane root = buildLayout();
         gameScene = new Scene(root, W, H);
-        gameScene.setFill(Color.web("#1a1a2e"));
+        gameScene.setFill(Color.web("#13131f"));
         gameScene.setOnKeyPressed(e -> handleKey(e.getCode().toString()));
     }
 
@@ -171,8 +172,8 @@ public class Main extends Application {
         currentMaze    = null;
         currentLevel   = null;
         mazeInProgress = false;
-        enemies        = new java.util.ArrayList<>();
-        itemsOnMap     = new java.util.HashMap<>();
+        enemies        = new ArrayList<>();
+        itemsOnMap     = new HashMap<>();
         gameTick       = 0;
         refreshAll();
         drawWelcome();
@@ -204,7 +205,7 @@ public class Main extends Application {
         gameTick = 0;
         wallPassActive = false;
         speedBoostTicks = 0;
-        playerItems = new java.util.HashMap<>();
+        playerItems = new HashMap<>();
         spawnEnemies();
         placeItemsOnMaze();
         updateInventoryDisplay();
@@ -212,13 +213,13 @@ public class Main extends Application {
     }
 
     private void spawnEnemies() {
-        enemies = new java.util.ArrayList<>();
+        enemies = new ArrayList<>();
         if (currentMaze == null) return;
         int physRows = currentMaze.getRows();
         int physCols = currentMaze.getCols();
         int pR = currentMaze.getPlayerRow();
         int pC = currentMaze.getPlayerCol();
-        java.util.List<int[]> candidates = new java.util.ArrayList<>();
+        ArrayList<int[]> candidates = new ArrayList<>();
         for (int r = 0; r < physRows; r++) {
             for (int c = 0; c < physCols; c++) {
                 if (!currentMaze.isWall(r, c)
@@ -227,7 +228,13 @@ public class Main extends Application {
                 }
             }
         }
-        java.util.Collections.shuffle(candidates, new java.util.Random());
+        java.util.Random rng0 = new java.util.Random();
+        for (int i = candidates.size() - 1; i > 0; i--) {
+            int j = rng0.nextInt(i + 1);
+            int[] tmp = candidates.get(i);
+            candidates.set(i, candidates.get(j));
+            candidates.set(j, tmp);
+        }
         int count = Math.min(3, candidates.size());
         for (int i = 0; i < count; i++) {
             int[] cell = candidates.get(i);
@@ -236,13 +243,13 @@ public class Main extends Application {
     }
 
     private void placeItemsOnMaze() {
-        itemsOnMap = new java.util.HashMap<>();
+        itemsOnMap = new HashMap<>();
         if (currentMaze == null) return;
         int physRows = currentMaze.getRows();
         int physCols = currentMaze.getCols();
         int exitR = (currentMaze.getLogRows() - 1) * 4 + 1;
         int exitC = (currentMaze.getLogCols() - 1) * 4 + 1;
-        java.util.List<int[]> openCells = new java.util.ArrayList<>();
+        ArrayList<int[]> openCells = new ArrayList<>();
         for (int r = 0; r < physRows; r++) {
             for (int c = 0; c < physCols; c++) {
                 if (!currentMaze.isWall(r, c)
@@ -252,7 +259,13 @@ public class Main extends Application {
                 }
             }
         }
-        java.util.Collections.shuffle(openCells, new java.util.Random());
+        java.util.Random rng1 = new java.util.Random();
+        for (int i = openCells.size() - 1; i > 0; i--) {
+            int j = rng1.nextInt(i + 1);
+            int[] tmp = openCells.get(i);
+            openCells.set(i, openCells.get(j));
+            openCells.set(j, tmp);
+        }
         Item.ItemType[] types = Item.ItemType.values();
         int perType = 2;
         int idx = 0;
@@ -303,7 +316,7 @@ public class Main extends Application {
                             break;
                     }
                     String key = r + "," + c;
-                    if (itemsOnMap.containsKey(key)) {
+                    if (itemsOnMap.containsKeyObj(key)) {
                         drawItemIcon(gc, x, y, cellW, cellH, itemsOnMap.get(key));
                     }
                 }
@@ -375,7 +388,7 @@ public class Main extends Application {
 
     private BorderPane buildLayout() {
         BorderPane root = new BorderPane();
-        root.setStyle("-fx-background-color: #1a1a2e;");
+        root.setStyle("-fx-background-color: #13131f;");
         root.setTop(buildTopBar());
         root.setLeft(levelPanel);
         root.setCenter(buildMazeCanvas());
@@ -390,27 +403,26 @@ public class Main extends Application {
 
         // ── 新增：用户名标签 ──
         userLabel = new Label("👤 —");
-        userLabel.setFont(Font.font("Monospaced", 12));
-        userLabel.setTextFill(Color.web("#a8dadc"));
+        userLabel.setFont(Font.font("Arial", FontWeight.BOLD, 13));
+        userLabel.setTextFill(Color.web("#e2e2f0"));
         userLabel.setPadding(new Insets(10, 10, 10, 14));
 
-        Button newMapBtn = styledBtn("↺ New Map", "#57cc99");
+        Button newMapBtn = styledBtn("↺  New Map", "#6bcb77");
         newMapBtn.setOnAction(e -> startNewGame());
-        newMapBtn.setPadding(new Insets(10, 12, 10, 12));
+        newMapBtn.setPadding(new Insets(10, 14, 10, 14));
 
-        // ── 新增：Logout 按钮 ──
-        Button logoutBtn = styledBtn("⏻ Logout", "#f4a261");
+        Button logoutBtn = styledBtn("⏻  Logout", "#ffd93d");
         logoutBtn.setOnAction(e -> handleLogout());
-        logoutBtn.setPadding(new Insets(10, 12, 10, 12));
+        logoutBtn.setPadding(new Insets(10, 14, 10, 14));
 
-        Button quitBtn = styledBtn("✕ Quit", "#e94560");
+        Button quitBtn = styledBtn("✕  Quit", "#ff6b81");
         quitBtn.setOnAction(e -> { db.disconnect(); Platform.exit(); });
-        quitBtn.setPadding(new Insets(10, 12, 10, 12));
+        quitBtn.setPadding(new Insets(10, 14, 10, 14));
 
         HBox btnBox = new HBox(0, userLabel, newMapBtn, logoutBtn, quitBtn);
         btnBox.setAlignment(Pos.CENTER_LEFT);
-        btnBox.setStyle("-fx-background-color: #16213e;"
-                + "-fx-border-color: #0f3460; -fx-border-width: 0 0 2 0;");
+        btnBox.setStyle("-fx-background-color: #1a1a2e;"
+                + "-fx-border-color: #383860; -fx-border-width: 0 0 2 0;");
 
         bar.getChildren().addAll(playerHUD, btnBox);
         return bar;
@@ -419,7 +431,7 @@ public class Main extends Application {
     private StackPane buildMazeCanvas() {
         mazeCanvas = new Canvas(MAZE, MAZE);
         StackPane wrap = new StackPane(mazeCanvas);
-        wrap.setStyle("-fx-background-color: #0f3460;");
+        wrap.setStyle("-fx-background-color: #252540;");
         wrap.setPadding(new Insets(10));
         return wrap;
     }
@@ -434,10 +446,10 @@ public class Main extends Application {
     private HBox buildStatusBar() {
         HBox bar = new HBox();
         bar.setPadding(new Insets(6, 16, 6, 16));
-        bar.setStyle("-fx-background-color: #0f3460;");
+        bar.setStyle("-fx-background-color: #1a1a2e; -fx-border-color: #383860; -fx-border-width: 1 0 0 0;");
         statusLabel = new Label("Initialising…");
-        statusLabel.setFont(Font.font("Monospaced", 12));
-        statusLabel.setTextFill(Color.web("#a8dadc"));
+        statusLabel.setFont(Font.font("Arial", 13));
+        statusLabel.setTextFill(Color.web("#e2e2f0"));
         bar.getChildren().add(statusLabel);
         return bar;
     }
@@ -448,17 +460,17 @@ public class Main extends Application {
 
     private void drawWelcome() {
         GraphicsContext gc = mazeCanvas.getGraphicsContext2D();
-        gc.setFill(Color.web("#0d0d1a"));
+        gc.setFill(Color.web("#0f0f1a"));
         gc.fillRect(0, 0, MAZE, MAZE);
-        gc.setStroke(Color.web("#0f3460")); gc.setLineWidth(1);
-        for (int x = 0; x <= MAZE; x += 20) gc.strokeLine(x, 0, x, MAZE);
-        for (int y = 0; y <= MAZE; y += 20) gc.strokeLine(0, y, MAZE, y);
-        gc.setFill(Color.web("#e94560"));
-        gc.setFont(Font.font("Monospaced", FontWeight.BOLD, 22));
-        gc.fillText("MAZE EXPLORER RPG", 120, MAZE / 2 - 20);
-        gc.setFill(Color.web("#a8dadc"));
-        gc.setFont(Font.font("Monospaced", 14));
-        gc.fillText("Click a node on the map to start", 135, MAZE / 2 + 20);
+        gc.setStroke(Color.web("#252540")); gc.setLineWidth(1);
+        for (int x = 0; x <= MAZE; x += 30) gc.strokeLine(x, 0, x, MAZE);
+        for (int y = 0; y <= MAZE; y += 30) gc.strokeLine(0, y, MAZE, y);
+        gc.setFill(Color.web("#ff6b81"));
+        gc.setFont(Font.font("Arial", FontWeight.BOLD, 26));
+        gc.fillText("MAZE EXPLORER RPG", 105, MAZE / 2 - 24);
+        gc.setFill(Color.web("#e2e2f0"));
+        gc.setFont(Font.font("Arial", 15));
+        gc.fillText("Select a node on the map to begin", 115, MAZE / 2 + 16);
     }
 
     // ──────────────────────────────────────────────
@@ -540,10 +552,8 @@ public class Main extends Application {
                         if (dead) {
                             mazeInProgress = false;
                             currentMaze = null;
-                            enemies = new java.util.ArrayList<>();
-                            itemsOnMap = new java.util.HashMap<>();
-                            updateStatus("☠ Caught by enemy! All lives lost. Score RESET.");
-                            drawWelcome();
+                            updateStatus("☠ All lives lost! Generating new map...");
+                            startNewGame();
                             return;
                         } else {
                             updateStatus("Caught by enemy! Lives: " + gameState.getLives()
@@ -556,22 +566,21 @@ public class Main extends Application {
                 renderMaze();
                 if (currentMaze.isPlayerAtExit()) {
                     mazeInProgress = false;
-                    enemies = new java.util.ArrayList<>();
-                    itemsOnMap = new java.util.HashMap<>();
+                    enemies = new ArrayList<>();
+                    itemsOnMap = new HashMap<>();
                     gameState.onNodeCompleted();
+                    int pathScore = gameState.getLastPathScore();
+                    // 保存本次通关分数到数据库
+                    if (pathScore > 0 && auth.getCurrentUser() != null) {
+                        db.saveScore(auth.getCurrentUser(), pathScore,
+                                currentLevel.getLevelId());
+                    }
                     refreshAll();
                     Level curr = gameState.getCurrentNode();
                     if (curr != null && curr.isStart()) {
-                        // ── 新增：通关写入 MySQL ──
-                        List<Integer> top = gameState.getTopK(1);
-                        if (!top.isEmpty() && auth.getCurrentUser() != null) {
-                            db.saveScore(auth.getCurrentUser(), top.get(0),
-                                    currentLevel.getLevelId());
-                        }
-                        // Bug fix: generate a fresh map so completed nodes don't persist
                         gameState.generateNewMap();
                         refreshAll();
-                        updateStatus("Path complete! Score saved. New map generated – choose a path!");
+                        updateStatus("Path complete!  +" + pathScore + " pts saved.  New map – choose a path!");
                         drawWelcome();
                     } else {
                         updateStatus("Cleared! +" + currentLevel.getScoreValue()
@@ -597,10 +606,11 @@ public class Main extends Application {
 
     // ──── 穿墙 / 加速状态 ────
     private boolean wallPassActive  = false;
-    private java.util.Map<Item.ItemType, Integer> playerItems = new java.util.HashMap<>();
+    private HashMap<Integer> playerItems = new HashMap<>();
 
     private void useItemInMaze(Item.ItemType type) {
-        int count = playerItems.getOrDefault(type, 0);
+        Integer countVal = playerItems.get(type);
+        int count = countVal != null ? countVal : 0;
         if (count <= 0) {
             updateStatus("You don't have " + type.displayName + "! Pick one up in the maze.");
             return;
@@ -648,9 +658,10 @@ public class Main extends Application {
 
     private void checkItemPickup(int r, int c) {
         String key = r + "," + c;
-        if (itemsOnMap.containsKey(key)) {
+        if (itemsOnMap.containsKeyObj(key)) {
             Item.ItemType type = itemsOnMap.remove(key);
-            int current = playerItems.getOrDefault(type, 0);
+            Integer currentVal = playerItems.get(type);
+            int current = currentVal != null ? currentVal : 0;
             playerItems.put(type, current + 1);
             updateStatus("Picked up: " + type.icon + " " + type.displayName
                     + "! Press " + itemKeyHint(type) + " to use.  "
@@ -675,7 +686,8 @@ public class Main extends Application {
     private String inventorySummary() {
         StringBuilder sb = new StringBuilder();
         for (Item.ItemType t : Item.ItemType.values()) {
-            int count = playerItems.getOrDefault(t, 0);
+            Integer cVal = playerItems.get(t);
+            int count = cVal != null ? cVal : 0;
             if (count > 0) {
                 if (sb.length() > 0) sb.append("  ");
                 sb.append(t.icon).append("x").append(count);
@@ -685,9 +697,10 @@ public class Main extends Application {
     }
 
     private void updateInventoryDisplay() {
-        java.util.List<InventoryPanel.Item> displayItems = new java.util.ArrayList<>();
+        ArrayList<InventoryPanel.Item> displayItems = new ArrayList<>();
         for (Item.ItemType type : Item.ItemType.values()) {
-            int count = playerItems.getOrDefault(type, 0);
+            Integer dVal = playerItems.get(type);
+            int count = dVal != null ? dVal : 0;
             if (count > 0) {
                 displayItems.add(new InventoryPanel.Item(
                         type.displayName, "Consumable", rarityForType(type), count));
@@ -695,7 +708,7 @@ public class Main extends Application {
         }
         inventoryPanel.setItems(displayItems);
 
-        java.util.List<String> activeBuffs = new java.util.ArrayList<>();
+        ArrayList<String> activeBuffs = new ArrayList<>();
         if (speedBoostTicks > 0)  activeBuffs.add("⚡Speed(" + speedBoostTicks + ")");
         if (wallPassActive)       activeBuffs.add("🧱WallPass");
         playerHUD.setActiveBuffs(activeBuffs);
@@ -716,8 +729,8 @@ public class Main extends Application {
         boolean dead   = gameState.onNodeFailed();
         refreshAll();
         if (dead) {
-            updateStatus("☠ All lives lost! Score RESET to 0. Try again.");
-            drawWelcome();
+            updateStatus("☠ All lives lost! Generating new map...");
+            startNewGame();
         } else {
             updateStatus("✗ Failed! Lives: " + gameState.getLives()
                     + "  |  Click the same node to retry.");
@@ -756,13 +769,16 @@ public class Main extends Application {
 
     private Button styledBtn(String text, String col) {
         Button btn = new Button(text);
-        btn.setFont(Font.font("Monospaced", 12));
+        btn.setFont(Font.font("Arial", FontWeight.BOLD, 13));
         btn.setTextFill(Color.web(col));
-        String n = "-fx-background-color:#0f3460;-fx-border-color:" + col + ";-fx-border-width:1;-fx-cursor:hand;";
-        String h = "-fx-background-color:#1a1a4e;-fx-border-color:" + col + ";-fx-border-width:1;-fx-cursor:hand;";
+        String n = "-fx-background-color:#1e1e30;-fx-border-color:" + col
+                + ";-fx-border-width:1;-fx-border-radius:4;-fx-background-radius:4;-fx-cursor:hand;";
+        String h = "-fx-background-color:" + col
+                + ";-fx-border-color:" + col
+                + ";-fx-border-width:1;-fx-border-radius:4;-fx-background-radius:4;-fx-cursor:hand;";
         btn.setStyle(n);
-        btn.setOnMouseEntered(e -> btn.setStyle(h));
-        btn.setOnMouseExited(e  -> btn.setStyle(n));
+        btn.setOnMouseEntered(e -> { btn.setStyle(h); btn.setTextFill(Color.web("#13131f")); });
+        btn.setOnMouseExited (e -> { btn.setStyle(n); btn.setTextFill(Color.web(col));       });
         return btn;
     }
 

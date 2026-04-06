@@ -4,6 +4,8 @@ import Model.Level;
 import World.GameMap;
 import World.GameStateController;
 
+import Implementation.ArrayList;
+
 import javafx.geometry.Insets;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
@@ -13,8 +15,6 @@ import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
-
-import java.util.List;
 
 /**
  * C7 – Level-selection map panel.
@@ -34,19 +34,19 @@ public class LevelPanel extends VBox {
         void onSelected(Level node);
     }
 
-    private static final Color COL_BG          = Color.web("#0d0d1a");
-    private static final Color COL_EDGE         = Color.web("#334466");
-    private static final Color COL_EDGE_AVAIL   = Color.web("#a8dadc");
-    private static final Color COL_START        = Color.web("#4a90d9");
-    private static final Color COL_EASY         = Color.web("#57cc99");
-    private static final Color COL_MEDIUM       = Color.web("#f4d35e");
-    private static final Color COL_HARD         = Color.web("#e94560");
-    private static final Color COL_COMPLETED_OV = Color.web("#ffffff88");
+    private static final Color COL_BG          = Color.web("#0f0f1a");
+    private static final Color COL_EDGE         = Color.web("#404060");
+    private static final Color COL_EDGE_AVAIL   = Color.web("#43cfff");
+    private static final Color COL_START        = Color.web("#4d96ff");
+    private static final Color COL_EASY         = Color.web("#6bcb77");
+    private static final Color COL_MEDIUM       = Color.web("#ffd93d");
+    private static final Color COL_HARD         = Color.web("#ff6b81");
+    private static final Color COL_COMPLETED_OV = Color.web("#ffffff99");
     private static final Color COL_CURRENT_RING = Color.web("#ffffff");
-    private static final Color COL_AVAIL_RING   = Color.web("#ffe066");
-    private static final Color COL_LOCKED       = Color.web("#2a2a3a");
-    private static final Color COL_TEXT         = Color.web("#a8dadc");
-    private static final Color COL_TEXT_DARK    = Color.web("#1a1a2e");
+    private static final Color COL_AVAIL_RING   = Color.web("#43cfff");
+    private static final Color COL_LOCKED       = Color.web("#252535");
+    private static final Color COL_TEXT         = Color.web("#e2e2f0");
+    private static final Color COL_TEXT_DARK    = Color.web("#13131f");
 
     private final GameStateController gameState;
     private NodeSelectCallback        onNodeSelected;
@@ -59,22 +59,22 @@ public class LevelPanel extends VBox {
 
         setPrefWidth(300);
         setSpacing(0);
-        setStyle("-fx-background-color: #16213e;"
-                + "-fx-border-color: #0f3460; -fx-border-width: 0 2 0 0;");
+        setStyle("-fx-background-color: #13131f;"
+                + "-fx-border-color: #383860; -fx-border-width: 0 2 0 0;");
 
         VBox header = buildHeader();
 
         livesLabel = new Label("♥ ♥ ♥");
-        livesLabel.setFont(Font.font("Monospaced", FontWeight.BOLD, 13));
-        livesLabel.setTextFill(Color.web("#e94560"));
+        livesLabel.setFont(Font.font("Arial", FontWeight.BOLD, 14));
+        livesLabel.setTextFill(Color.web("#ff6b81"));
 
         scoreLabel = new Label("Path score: 0");
-        scoreLabel.setFont(Font.font("Monospaced", 12));
-        scoreLabel.setTextFill(Color.web("#f4d35e"));
+        scoreLabel.setFont(Font.font("Courier New", FontWeight.BOLD, 13));
+        scoreLabel.setTextFill(Color.web("#ffd93d"));
 
-        VBox statusBox = new VBox(2, livesLabel, scoreLabel);
-        statusBox.setPadding(new Insets(6, 10, 6, 10));
-        statusBox.setStyle("-fx-background-color: #0f1e3a;");
+        VBox statusBox = new VBox(3, livesLabel, scoreLabel);
+        statusBox.setPadding(new Insets(7, 12, 7, 12));
+        statusBox.setStyle("-fx-background-color: #1a1a2e; -fx-border-color: #383860; -fx-border-width: 0 0 1 0;");
 
         mapCanvas = new Canvas(GameMap.CANVAS_W, GameMap.CANVAS_H);
         mapCanvas.setOnMouseClicked(e -> handleClick(e.getX(), e.getY()));
@@ -107,14 +107,14 @@ public class LevelPanel extends VBox {
         GameMap map = gameState.getCurrentMap();
         if (map == null) {
             gc.setFill(COL_TEXT);
-            gc.setFont(Font.font("Monospaced", 13));
+            gc.setFont(Font.font("Arial", 14));
             gc.fillText("No map generated.\nPress  [ New Game ].", 160, 260);
             return;
         }
 
-        Level       currentNode = gameState.getCurrentNode();
-        List<Level> avail       = map.getChildren(currentNode);
-        List<Level> allNodes    = map.getAllNodes();
+        Level            currentNode = gameState.getCurrentNode();
+        ArrayList<Level> avail      = map.getChildren(currentNode);
+        ArrayList<Level> allNodes   = map.getAllNodes();
 
         // Draw edges first
         for (Level node : allNodes) {
@@ -170,18 +170,18 @@ public class LevelPanel extends VBox {
             gc.setFill(COL_COMPLETED_OV);
             gc.fillOval(cx - r, cy - r, r * 2, r * 2);
             gc.setFill(COL_TEXT_DARK);
-            gc.setFont(Font.font("Monospaced", FontWeight.BOLD, 13));
+            gc.setFont(Font.font("Arial", FontWeight.BOLD, 13));
             gc.fillText("✓", cx - 5, cy + 5);
             return;
         }
 
         if (node.isStart()) {
             gc.setFill(Color.WHITE);
-            gc.setFont(Font.font("Monospaced", FontWeight.BOLD, 9));
+            gc.setFont(Font.font("Arial", FontWeight.BOLD, 9));
             gc.fillText("START", cx - 13, cy + 4);
         } else {
             gc.setFill(COL_TEXT_DARK);
-            gc.setFont(Font.font("Monospaced", FontWeight.BOLD, 10));
+            gc.setFont(Font.font("Arial", FontWeight.BOLD, 10));
             String pts = "+" + node.getScoreValue();
             gc.fillText(pts, cx - (pts.length() * 3), cy + 4);
         }
@@ -204,7 +204,7 @@ public class LevelPanel extends VBox {
         if (map == null || onNodeSelected == null) return;
 
         Level current = gameState.getCurrentNode();
-        List<Level> available = map.getChildren(current);
+        ArrayList<Level> available = map.getChildren(current);
 
         for (Level node : available) {
             double[] pos = map.getPosition(node);
@@ -232,37 +232,39 @@ public class LevelPanel extends VBox {
 
     private VBox buildHeader() {
         VBox header = new VBox(4);
-        header.setPadding(new Insets(10, 10, 8, 10));
-        header.setStyle("-fx-background-color: #0f3460;");
+        header.setPadding(new Insets(10, 12, 8, 12));
+        header.setStyle("-fx-background-color: #1a1a2e;"
+                + "-fx-border-color: #383860; -fx-border-width: 0 0 1 0;");
 
-        Label icon = new Label("🗺  LEVEL MAP");
-        icon.setFont(Font.font("Monospaced", FontWeight.BOLD, 13));
-        icon.setTextFill(Color.web("#e94560"));
+        Label icon = new Label("MAP  —  Level Selection");
+        icon.setFont(Font.font("Arial", FontWeight.BOLD, 14));
+        icon.setTextFill(Color.web("#43cfff"));
 
         Label sub = new Label("Click a highlighted node to enter");
-        sub.setFont(Font.font("Monospaced", 10));
-        sub.setTextFill(Color.web("#555"));
+        sub.setFont(Font.font("Arial", 11));
+        sub.setTextFill(Color.web("#b0b0cc"));
 
         header.getChildren().addAll(icon, sub);
         return header;
     }
 
     private VBox buildLegend() {
-        VBox legend = new VBox(3);
-        legend.setPadding(new Insets(6, 10, 8, 10));
-        legend.setStyle("-fx-background-color: #0f1e3a;");
+        VBox legend = new VBox(4);
+        legend.setPadding(new Insets(6, 12, 8, 12));
+        legend.setStyle("-fx-background-color: #1a1a2e;"
+                + "-fx-border-color: #383860; -fx-border-width: 1 0 0 0;");
         legend.getChildren().addAll(
-                legendRow("● Easy   (+20)",  "#57cc99"),
-                legendRow("● Medium (+30)",  "#f4d35e"),
-                legendRow("● Hard   (+50)",  "#e94560"),
-                legendRow("○ Highlighted = available", "#ffe066")
+                legendRow("● Easy   +20 pts",    "#6bcb77"),
+                legendRow("● Medium +30 pts",    "#ffd93d"),
+                legendRow("● Hard   +50 pts",    "#ff6b81"),
+                legendRow("○ Highlighted = available", "#43cfff")
         );
         return legend;
     }
 
     private Label legendRow(String text, String colour) {
         Label lbl = new Label(text);
-        lbl.setFont(Font.font("Monospaced", 11));
+        lbl.setFont(Font.font("Arial", FontWeight.BOLD, 11));
         lbl.setTextFill(Color.web(colour));
         return lbl;
     }

@@ -1,12 +1,10 @@
 package World;
 
+import Implementation.ArrayList;
 import Implementation.AVLTree;
 import Implementation.MaxHeap;
 import Model.GameRecord;
 import Model.Level;
-
-import java.util.ArrayList;
-import java.util.List;
 
 /**
  * Central controller for game state.
@@ -36,6 +34,7 @@ public class GameStateController {
     private GameMap currentMap;
     private Level   currentNode;
     private int     accumulatedScore;
+    private int     lastPathScore;
     private int     lives;
     private boolean pathActive;
 
@@ -74,7 +73,7 @@ public class GameStateController {
         if (currentMap == null || node == null) return false;
         // 只有从 START 出发，或当前节点已完成，才能进入子节点
         if (!currentNode.isStart() && !currentNode.isCompleted()) return false;
-        List<Level> available = currentMap.getChildren(currentNode);
+        ArrayList<Level> available = currentMap.getChildren(currentNode);
         if (!available.contains(node)) return false;
         currentNode = node;
         pathActive  = true;
@@ -107,6 +106,7 @@ public class GameStateController {
     // ------------------------------------------------------------------ //
 
     private void submitPathScore() {
+        lastPathScore = accumulatedScore;
         if (accumulatedScore > 0) {
             int levelId = currentNode != null ? currentNode.getLevelId() : 0;
             recordScore(accumulatedScore,
@@ -135,8 +135,8 @@ public class GameStateController {
         recordScore(score, new GameRecord("Player", score, levelId, 0L));
     }
 
-    public List<Integer>    getTopK(int k)               { return leaderboard.topK(k);              }
-    public List<GameRecord> getScoreRange(int lo, int hi) { return scoreHistory.rangeQuery(lo, hi); }
+    public ArrayList<Integer>    getTopK(int k)               { return leaderboard.topK(k);              }
+    public ArrayList<GameRecord> getScoreRange(int lo, int hi) { return scoreHistory.rangeQuery(lo, hi); }
 
     // ------------------------------------------------------------------ //
     //  State getters
@@ -144,6 +144,7 @@ public class GameStateController {
 
     public Level   getCurrentNode()      { return currentNode;      }
     public int     getAccumulatedScore() { return accumulatedScore; }
+    public int     getLastPathScore()    { return lastPathScore;    }
     public int     getLives()            { return lives;            }
     public boolean isPathActive()        { return pathActive;       }
 }

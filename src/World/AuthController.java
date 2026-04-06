@@ -15,7 +15,7 @@ public class AuthController {
     private       boolean   dbAvailable = false;
 
     // Fallback in-memory store (used when DB is offline)
-    private final java.util.Map<String, String> memUsers = new java.util.HashMap<>();
+    private final Implementation.HashMap<String> memUsers = new Implementation.HashMap<>();
 
     // ------------------------------------------------------------------ //
     //  Constructor
@@ -48,7 +48,7 @@ public class AuthController {
         if (username.length() < 3)                    return "Username must be ≥ 3 chars.";
         if (password == null || password.length() < 4) return "Password must be ≥ 4 chars.";
         if (!password.equals(confirmPassword))         return "Passwords do not match.";
-        if (memUsers.containsKey(username))            return "Username already taken.";
+        if (memUsers.containsKeyObj(username))          return "Username already taken.";
         memUsers.put(username, password);
         return null;
     }
@@ -65,7 +65,7 @@ public class AuthController {
             err = db.login(username, password);
         } else {
             // Fallback
-            if (!memUsers.containsKey(username)) err = "User not found.";
+            if (!memUsers.containsKeyObj(username)) err = "User not found.";
             else if (!memUsers.get(username).equals(password)) err = "Incorrect password.";
             else err = null;
         }

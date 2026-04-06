@@ -4,10 +4,10 @@ import Interface.PriorityQueueInterface;
 
 public class HeapPriorityQueue<T extends Comparable<T>> implements PriorityQueueInterface<T> {
 
-    private final java.util.ArrayList<T> heap;
+    private final ArrayList<T> heap;
 
     public HeapPriorityQueue() {
-        this.heap = new java.util.ArrayList<>();
+        this.heap = new ArrayList<>();
     }
 
     @Override
