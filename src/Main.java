@@ -40,6 +40,7 @@ import javafx.stage.Stage;
  *   - 通关时分数写入 MySQL scores 表
  *   - 顶部新增用户名显示 + Logout 按钮
  *   - 移除 Action logAction（回放功能不需要）
+ *   - 通关后排行榜立刻反映真实用户名的分数
  */
 public class Main extends Application {
 
@@ -101,6 +102,15 @@ public class Main extends Application {
         auth      = new AuthController(db);
         gameState = new GameStateController();
 
+        // Register DB sync callback so every leaderboard query reloads from MySQL
+        gameState.setDbSyncCallback(gsc -> {
+            ArrayList<DBManager.ScoreRecord> rows = db.loadAllScores();
+            for (DBManager.ScoreRecord row : rows) {
+                gsc.recordScore(row.score,
+                        new Model.GameRecord(row.username, row.score, row.levelId, 0L));
+            }
+        });
+
         // ── 新增：从 MySQL 恢复历史分数到 MaxHeap + AVLTree ──
         loadHistoricalScores();
 
@@ -140,6 +150,8 @@ public class Main extends Application {
     }
 
     private void onLoginSuccess(String username) {
+        // Pass real username so scores are recorded correctly in MaxHeap / AVLTree
+        gameState.setCurrentUsername(username);
         startNewGame();
         userLabel.setText("👤 " + username + (auth.isDbAvailable() ? "  🟢" : "  🟡"));
         primaryStage.setScene(gameScene);
@@ -575,7 +587,8 @@ public class Main extends Application {
                         db.saveScore(auth.getCurrentUser(), pathScore,
                                 currentLevel.getLevelId());
                     }
-                    refreshAll();
+                    // Refresh leaderboard immediately so new score is visible
+                    leaderboardPanel.refresh();
                     Level curr = gameState.getCurrentNode();
                     if (curr != null && curr.isStart()) {
                         gameState.generateNewMap();
@@ -583,6 +596,7 @@ public class Main extends Application {
                         updateStatus("Path complete!  +" + pathScore + " pts saved.  New map – choose a path!");
                         drawWelcome();
                     } else {
+                        refreshAll();
                         updateStatus("Cleared! +" + currentLevel.getScoreValue()
                                 + " pts  |  Accumulated: " + gameState.getAccumulatedScore()
                                 + "  |  Click next node or continue.");
