@@ -1,0 +1,54 @@
+package Implementation;
+
+import Interface.GraphInterface;
+
+/**
+ * 无向图 —— 邻接表实现
+ * 顶点用自定义 HashMap 索引，每条边存储两次（双向）
+ */
+public class Graph<T> implements GraphInterface<T> {
+
+    private final HashMap<ArrayList<T>> adjMap;
+    private int edgeCount;
+
+    public Graph() {
+        adjMap = new HashMap<>();
+        edgeCount = 0;
+    }
+
+    /** 添加顶点（若已存在则忽略） */
+    @Override
+    public void addVertex(T vertex) {
+        adjMap.putIfAbsent(vertex, new ArrayList<>());
+    }
+
+    /** 添加无向边；若顶点不存在则自动添加 */
+    @Override
+    public void addEdge(T start, T end) {
+        addVertex(start);
+        addVertex(end);
+        adjMap.get(start).add(end);
+        adjMap.get(end).add(start);
+        edgeCount++;
+    }
+
+    /** 删除无向边（两个方向都删除） */
+    @Override
+    public void removeEdge(T start, T end) {
+        ArrayList<T> startList = (ArrayList<T>) adjMap.get(start);
+        ArrayList<T> endList   = (ArrayList<T>) adjMap.get(end);
+        if (startList != null && endList != null) {
+            boolean removed = startList.removeElement(end);
+            endList.removeElement(start);
+            if (removed) edgeCount--;
+        }
+    }
+
+    /** 返回与 start 相邻的所有顶点 */
+    @Override
+    public Iterable<T> adj(T start) {
+        ArrayList<T> neighbors = (ArrayList<T>) adjMap.get(start);
+        if (neighbors == null) return new ArrayList<>();
+        return neighbors;
+    }
+}
