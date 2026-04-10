@@ -19,13 +19,6 @@ import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
 
-/**
- * LevelPanel — 左侧关卡地图面板。
- *
- * 重构后通过 GameEvent.Bus 自我刷新，外部无需调用任何方法。
- * 订阅事件：MAP_GENERATED / NODE_ENTERED / NODE_COMPLETED / NODE_FAILED /
- *           LIVES_CHANGED / SCORE_CHANGED
- */
 public class LevelPanel extends VBox {
 
     @FunctionalInterface
@@ -83,25 +76,20 @@ public class LevelPanel extends VBox {
 
         getChildren().addAll(buildHeader(), statusBox, canvasBox, buildLegend());
 
-        // ── 订阅事件 ────────────────────────────────────────────────────
         GameEvent.Bus bus = GameEvent.Bus.get();
 
-        // 地图结构变化 → 重绘整张地图
         bus.subscribe(EventType.MAP_GENERATED,   e -> Platform.runLater(this::drawMap));
         bus.subscribe(EventType.NODE_ENTERED,    e -> Platform.runLater(this::drawMap));
         bus.subscribe(EventType.NODE_COMPLETED,  e -> Platform.runLater(this::drawMap));
         bus.subscribe(EventType.NODE_FAILED,     e -> Platform.runLater(this::drawMap));
         bus.subscribe(EventType.GAME_OVER,       e -> Platform.runLater(this::drawMap));
 
-        // 状态标签变化 → 更新生命/分数显示
         bus.subscribe(EventType.LIVES_CHANGED,   e -> Platform.runLater(this::updateStatusLabels));
         bus.subscribe(EventType.SCORE_CHANGED,   e -> Platform.runLater(this::updateStatusLabels));
         bus.subscribe(EventType.NODE_COMPLETED,  e -> Platform.runLater(this::updateStatusLabels));
     }
 
     public void setOnNodeSelected(NodeSelectCallback cb) { this.onNodeSelected = cb; }
-
-    // ── Drawing ──────────────────────────────────────────────────────────
 
     private void drawMap() {
         GraphicsContext gc = mapCanvas.getGraphicsContext2D();
@@ -199,7 +187,6 @@ public class LevelPanel extends VBox {
         }
     }
 
-    // ── Click handling ───────────────────────────────────────────────────
 
     private void handleClick(double mx, double my) {
         GameMap map = gameState.getCurrentMap();
@@ -219,7 +206,6 @@ public class LevelPanel extends VBox {
         }
     }
 
-    // ── Status labels ────────────────────────────────────────────────────
 
     private void updateStatusLabels() {
         int lives = gameState.getLives();
@@ -230,7 +216,6 @@ public class LevelPanel extends VBox {
         scoreLabel.setText("Path score: " + gameState.getAccumulatedScore());
     }
 
-    // ── UI builders ──────────────────────────────────────────────────────
 
     private VBox buildHeader() {
         VBox header = new VBox(4);

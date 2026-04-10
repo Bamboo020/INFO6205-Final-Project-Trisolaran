@@ -53,8 +53,6 @@ public class HeapPriorityQueue<T extends Comparable<T>> implements PriorityQueue
         heap.clear();
     }
 
-    // ========== Internal heap operations ==========
-
     private void siftUp(int index) {
         while (index > 0) {
             int parent = (index - 1) / 2;

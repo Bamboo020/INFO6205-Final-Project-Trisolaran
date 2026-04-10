@@ -1,9 +1,5 @@
 package Model;
 
-/**
- * Stores a completed game session's summary.
- * Used as the value type in the AVLTree, keyed by score.
- */
 public class GameRecord {
 
     private final String playerName;

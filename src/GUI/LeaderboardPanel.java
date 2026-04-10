@@ -20,12 +20,6 @@ import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
 
-/**
- * LeaderboardPanel — 右侧排行榜面板。
- *
- * 重构后通过 GameEvent.Bus 自我刷新，外部无需调用任何方法。
- * 订阅事件：NODE_COMPLETED（路径完成后刷新榜单）/ PLAYER_LOGGED_IN（重载历史）
- */
 public class LeaderboardPanel extends VBox {
 
     private static final String BG        = "#13131f";
@@ -120,22 +114,17 @@ public class LeaderboardPanel extends VBox {
                 inputRow, btnRow, rangeCountLabel, rangeScroll
         );
 
-        // 初始加载
         refreshTopList();
 
-        // ── 订阅事件 ────────────────────────────────────────────────────
         GameEvent.Bus bus = GameEvent.Bus.get();
 
-        // 路径完成（叶节点）才会有新分数入库，刷新榜单
         bus.subscribe(EventType.NODE_COMPLETED,
                 e -> Platform.runLater(this::refreshTopList));
 
-        // 用户登录后重新拉取历史分数
         bus.subscribe(EventType.PLAYER_LOGGED_IN,
                 e -> Platform.runLater(this::refreshTopList));
     }
 
-    // ── Top-10 ───────────────────────────────────────────────────────────
 
     private void refreshTopList() {
         topListBox.getChildren().clear();
@@ -201,7 +190,6 @@ public class LeaderboardPanel extends VBox {
         return row;
     }
 
-    // ── Rank query ───────────────────────────────────────────────────────
 
     private void runRankQuery() {
         rankResultLabel.setText("");
@@ -224,8 +212,6 @@ public class LeaderboardPanel extends VBox {
         rankResultLabel.setText("Rank #" + rank + "  →  " + String.format("%,d pts", s));
         rankResultLabel.setTextFill(Color.web(GOLD));
     }
-
-    // ── Range query ──────────────────────────────────────────────────────
 
     private void runRangeQuery() {
         rangeResultBox.getChildren().clear();
@@ -277,8 +263,6 @@ public class LeaderboardPanel extends VBox {
         row.getChildren().addAll(nameLbl, sp, scoreLbl, lvLbl);
         return row;
     }
-
-    // ── UI helpers ───────────────────────────────────────────────────────
 
     private VBox sectionHeader(String title, String subtitle) {
         VBox header = new VBox(2);

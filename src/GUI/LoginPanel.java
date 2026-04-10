@@ -13,28 +13,12 @@ import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
 import javafx.scene.text.TextAlignment;
 
-/**
- * Full-screen login / register panel.
- *
- * Uses MySQL via AuthController.
- * Shows a warning banner when running in offline (in-memory) mode.
- *
- * On success fires AuthCallback(username) so Main.java can switch scene.
- */
 public class LoginPanel extends StackPane {
-
-    // ------------------------------------------------------------------ //
-    //  Callback
-    // ------------------------------------------------------------------ //
 
     @FunctionalInterface
     public interface AuthCallback {
         void onSuccess(String username);
     }
-
-    // ------------------------------------------------------------------ //
-    //  Colours
-    // ------------------------------------------------------------------ //
 
     private static final String BG      = "#0d0d1a";
     private static final String CARD_BG = "#16213e";
@@ -45,10 +29,6 @@ public class LoginPanel extends StackPane {
     private static final String ORANGE  = "#f4a261";
     private static final String TEXT    = "#a8dadc";
     private static final String DIM     = "#b0b0cc";
-
-    // ------------------------------------------------------------------ //
-    //  Fields
-    // ------------------------------------------------------------------ //
 
     private final AuthController auth;
     private AuthCallback         onSuccess;
@@ -65,20 +45,14 @@ public class LoginPanel extends StackPane {
     private final Label         switchHint;
     private final Label         dbStatusLabel;
 
-    // ------------------------------------------------------------------ //
-    //  Constructor
-    // ------------------------------------------------------------------ //
-
     public LoginPanel(AuthController auth) {
         this.auth = auth;
 
         setStyle("-fx-background-color: " + BG + ";");
 
-        // Background canvas
         Canvas bg = new Canvas(1200, 760);
         drawBackground(bg);
 
-        // ---- Card ----
         VBox card = new VBox(12);
         card.setPrefWidth(420);
         card.setMaxWidth(420);
@@ -91,7 +65,6 @@ public class LoginPanel extends StackPane {
                         + "-fx-border-width: 1; -fx-border-radius: 12;"
                         + "-fx-effect: dropshadow(gaussian,rgba(0,0,0,0.7),28,0,0,6);");
 
-        // Title
         Label titleLbl = new Label("⚔  MAZE EXPLORER RPG");
         titleLbl.setFont(Font.font("Monospaced", FontWeight.BOLD, 17));
         titleLbl.setTextFill(Color.web(RED));
@@ -100,10 +73,8 @@ public class LoginPanel extends StackPane {
         subtitleLbl.setFont(Font.font("Monospaced", 11));
         subtitleLbl.setTextFill(Color.web(DIM));
 
-        // DB status banner
         dbStatusLabel = buildDbBanner();
 
-        // Tabs
         loginTab    = tabBtn("  Login  ");
         registerTab = tabBtn(" Register ");
         loginTab.setOnAction(e    -> switchMode(true));
@@ -112,13 +83,11 @@ public class LoginPanel extends StackPane {
         tabs.setAlignment(Pos.CENTER);
         tabs.setStyle("-fx-background-color: " + BORDER + "; -fx-background-radius: 6;");
 
-        // Fields
         usernameField = inputField("Username");
         passwordField = pwField("Password");
         confirmLabel  = fieldLabel("Confirm Password");
         confirmField  = pwField("Re-enter password");
 
-        // Error / success label
         errorLabel = new Label("");
         errorLabel.setFont(Font.font("Monospaced", 11));
         errorLabel.setTextFill(Color.web(RED));
@@ -126,7 +95,6 @@ public class LoginPanel extends StackPane {
         errorLabel.setMaxWidth(340);
         errorLabel.setTextAlignment(TextAlignment.CENTER);
 
-        // Submit button
         submitBtn = new Button("LOGIN");
         submitBtn.setFont(Font.font("Monospaced", FontWeight.BOLD, 14));
         submitBtn.setPrefWidth(340);
@@ -135,18 +103,15 @@ public class LoginPanel extends StackPane {
         applySubmitStyle(true);
         submitBtn.setOnAction(e -> handleSubmit());
 
-        // Enter key shortcuts
         passwordField.setOnAction(e -> handleSubmit());
         confirmField.setOnAction(e  -> handleSubmit());
         usernameField.setOnAction(e -> passwordField.requestFocus());
 
-        // Switch hint
         switchHint = new Label("");
         switchHint.setFont(Font.font("Monospaced", 10));
         switchHint.setTextFill(Color.web(DIM));
         switchHint.setTextAlignment(TextAlignment.CENTER);
 
-        // Guest hint
         Label guestHint = new Label("Quick test:  guest / guest");
         guestHint.setFont(Font.font("Monospaced", 10));
         guestHint.setTextFill(Color.web(DIM));
@@ -169,13 +134,8 @@ public class LoginPanel extends StackPane {
         switchMode(true);
     }
 
-    // ------------------------------------------------------------------ //
-    //  Public API
-    // ------------------------------------------------------------------ //
-
     public void setOnSuccess(AuthCallback cb) { this.onSuccess = cb; }
 
-    /** Clears all fields and resets to login mode. */
     public void reset() {
         usernameField.clear();
         passwordField.clear();
@@ -188,10 +148,6 @@ public class LoginPanel extends StackPane {
                 ? Color.web(GREEN) : Color.web(ORANGE));
         switchMode(true);
     }
-
-    // ------------------------------------------------------------------ //
-    //  Mode switching
-    // ------------------------------------------------------------------ //
 
     private void switchMode(boolean toLogin) {
         loginMode = toLogin;
@@ -222,10 +178,6 @@ public class LoginPanel extends StackPane {
                 : "Already have an account?  Click Login above.");
     }
 
-    // ------------------------------------------------------------------ //
-    //  Submit handler
-    // ------------------------------------------------------------------ //
-
     private void handleSubmit() {
         String username = usernameField.getText().trim();
         String password = passwordField.getText();
@@ -252,9 +204,6 @@ public class LoginPanel extends StackPane {
         }
     }
 
-    // ------------------------------------------------------------------ //
-    //  DB status banner
-    // ------------------------------------------------------------------ //
 
     private Label buildDbBanner() {
         Label lbl = new Label();
@@ -278,9 +227,6 @@ public class LoginPanel extends StackPane {
         return lbl;
     }
 
-    // ------------------------------------------------------------------ //
-    //  Background
-    // ------------------------------------------------------------------ //
 
     private void drawBackground(Canvas canvas) {
         GraphicsContext gc = canvas.getGraphicsContext2D();
@@ -297,9 +243,6 @@ public class LoginPanel extends StackPane {
         gc.fillText("INFO 6205 · Spring 2026 · Maze Explorer RPG", 20, 28);
     }
 
-    // ------------------------------------------------------------------ //
-    //  UI helpers
-    // ------------------------------------------------------------------ //
 
     private TextField inputField(String prompt) {
         TextField tf = new TextField();
