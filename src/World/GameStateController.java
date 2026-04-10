@@ -6,30 +6,12 @@ import Implementation.MaxHeap;
 import Model.GameRecord;
 import Model.Level;
 
-/**
- * Central controller for game state.
- *
- * Scoring:
- *   EASY   → +20 pts
- *   MEDIUM → +30 pts
- *   HARD   → +50 pts
- *   Path complete (leaf reached) → submit to leaderboard
- *   Lives hit 0                  → lose ALL accumulated score
- */
 public class GameStateController {
 
     public static final int INITIAL_LIVES = 3;
 
-    // ------------------------------------------------------------------ //
-    //  ADTs
-    // ------------------------------------------------------------------ //
-
     private final MaxHeap<Integer>             leaderboard;
     private final AVLTree<Integer, GameRecord> scoreHistory;
-
-    // ------------------------------------------------------------------ //
-    //  State
-    // ------------------------------------------------------------------ //
 
     private GameMap currentMap;
     private Level   currentNode;
@@ -38,10 +20,6 @@ public class GameStateController {
     private int     lives;
     private boolean pathActive;
 
-    // ------------------------------------------------------------------ //
-    //  Constructor
-    // ------------------------------------------------------------------ //
-
     public GameStateController() {
         leaderboard  = new MaxHeap<>();
         scoreHistory = new AVLTree<>();
@@ -49,10 +27,6 @@ public class GameStateController {
         accumulatedScore = 0;
         pathActive       = false;
     }
-
-    // ------------------------------------------------------------------ //
-    //  Map generation
-    // ------------------------------------------------------------------ //
 
     public void generateNewMap() {
         currentMap = new GameMap();
@@ -65,13 +39,8 @@ public class GameStateController {
 
     public GameMap getCurrentMap() { return currentMap; }
 
-    // ------------------------------------------------------------------ //
-    //  Player navigation
-    // ------------------------------------------------------------------ //
-
     public boolean moveToNode(Level node) {
         if (currentMap == null || node == null) return false;
-        // 只有从 START 出发，或当前节点已完成，才能进入子节点
         if (!currentNode.isStart() && !currentNode.isCompleted()) return false;
         ArrayList<Level> available = currentMap.getChildren(currentNode);
         if (!available.contains(node)) return false;
@@ -101,10 +70,6 @@ public class GameStateController {
         return false;
     }
 
-    // ------------------------------------------------------------------ //
-    //  Path scoring
-    // ------------------------------------------------------------------ //
-
     private void submitPathScore() {
         lastPathScore = accumulatedScore;
         if (accumulatedScore > 0) {
@@ -121,10 +86,6 @@ public class GameStateController {
         if (currentMap != null) currentNode = currentMap.getStartNode();
     }
 
-    // ------------------------------------------------------------------ //
-    //  Leaderboard & history
-    // ------------------------------------------------------------------ //
-
     public void recordScore(int score, GameRecord record) {
         leaderboard.insert(score);
         scoreHistory.put(score, record);
@@ -134,10 +95,6 @@ public class GameStateController {
 
     public ArrayList<Integer>    getTopK(int k)               { return leaderboard.topK(k);              }
     public ArrayList<GameRecord> getScoreRange(int lo, int hi) { return scoreHistory.rangeQuery(lo, hi); }
-
-    // ------------------------------------------------------------------ //
-    //  State getters
-    // ------------------------------------------------------------------ //
 
     public Level   getCurrentNode()      { return currentNode;      }
     public int     getAccumulatedScore() { return accumulatedScore; }

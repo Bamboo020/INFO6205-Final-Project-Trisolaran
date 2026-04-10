@@ -2,13 +2,6 @@ package Implementation;
 
 import Interface.HeapInterface;
 
-/**
- * 最小堆 —— 数组（ArrayList）实现
- * 支持 O(log n) 的 insert / popMin / decreaseKey
- * 使用 HashMap 记录每个元素的堆下标以实现 O(log n) decreaseKey
- *
- * 注意：要求元素唯一（适用于 A* 等路径寻找场景）
- */
 public class MinHeap<T extends Comparable<T>> implements HeapInterface<T> {
 
     private final ArrayList<T> heap;             // 从下标 0 开始存储
@@ -19,9 +12,6 @@ public class MinHeap<T extends Comparable<T>> implements HeapInterface<T> {
         indexMap = new HashMap<>();
     }
 
-    // -------- 公开 API --------
-
-    /** 插入元素，O(log n) */
     @Override
     public void insert(T item) {
         heap.add(item);
@@ -30,7 +20,6 @@ public class MinHeap<T extends Comparable<T>> implements HeapInterface<T> {
         siftUp(idx);
     }
 
-    /** 弹出并返回最小元素，O(log n) */
     @Override
     public T popMin() {
         if (isEmpty()) throw new java.util.NoSuchElementException("堆为空");
@@ -43,19 +32,15 @@ public class MinHeap<T extends Comparable<T>> implements HeapInterface<T> {
         return min;
     }
 
-    /** 堆是否为空 */
     @Override
     public boolean isEmpty() {
         return heap.isEmpty();
     }
 
-    /** 堆中元素个数 */
     @Override
     public int size() {
         return heap.size();
     }
-
-    // -------- 私有辅助 --------
 
     private int parent(int i) { return (i - 1) / 2; }
     private int left(int i)   { return 2 * i + 1; }
@@ -70,7 +55,6 @@ public class MinHeap<T extends Comparable<T>> implements HeapInterface<T> {
         indexMap.put(a, j);
     }
 
-    /** 上浮：插入 / decreaseKey 后恢复堆序 */
     private void siftUp(int i) {
         while (i > 0) {
             int p = parent(i);
@@ -83,7 +67,6 @@ public class MinHeap<T extends Comparable<T>> implements HeapInterface<T> {
         }
     }
 
-    /** 下沉：弹出堆顶后恢复堆序 */
     private void siftDown(int i) {
         int size = heap.size();
         while (true) {

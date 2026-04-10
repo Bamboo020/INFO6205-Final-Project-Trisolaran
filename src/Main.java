@@ -37,29 +37,23 @@ import javafx.stage.Stage;
 
 public class Main extends Application {
 
-    // ── 常量 ─────────────────────────────────────────────────────────────
     private static final int    W     = 1200;
     private static final int    H     = 760;
     private static final int    MAZE  = 570;
     private static final String TITLE = "Maze Explorer RPG – INFO 6205";
 
-    // ── 事件总线 ─────────────────────────────────────────────────────────
     private final GameEvent.Bus bus = GameEvent.Bus.get();
 
-    // ── DB / Auth ────────────────────────────────────────────────────────
     private DBManager      db;
     private AuthController auth;
 
-    // ── 场景 ─────────────────────────────────────────────────────────────
     private Stage      primaryStage;
     private Scene      loginScene;
     private Scene      gameScene;
     private LoginPanel loginPanel;
 
-    // ── 核心状态 ─────────────────────────────────────────────────────────
     private GameStateController gameState;
 
-    // ── 迷宫状态 ─────────────────────────────────────────────────────────
     private MazeGrid              currentMaze;
     private Level                 currentLevel;
     private boolean               mazeInProgress;
@@ -67,28 +61,16 @@ public class Main extends Application {
     private HashMap<Item.ItemType> itemsOnMap = new HashMap<>();
     private int                   gameTick;
 
-    // ── 玩家（背包 + buff，原来的三个散装字段）───────────────────────────
-    // 重构前：
-    //   private HashMap<Integer> playerItems = new HashMap<>();
-    //   private boolean          wallPassActive;
-    //   private int              speedBoostTicks;
-    // 重构后：统一由 Player 管理
     private Player player = new Player();
 
-    // ── 面板 ─────────────────────────────────────────────────────────────
     private PlayerHUD        playerHUD;
     private LevelPanel       levelPanel;
     private LeaderboardPanel leaderboardPanel;
     private InventoryPanel   inventoryPanel;
 
-    // ── UI refs ───────────────────────────────────────────────────────────
     private Canvas mazeCanvas;
     private Label  statusLabel;
     private Label  userLabel;
-
-    // ════════════════════════════════════════════════════════════════════
-    //  JavaFX lifecycle
-    // ════════════════════════════════════════════════════════════════════
 
     @Override
     public void start(Stage stage) {
@@ -111,10 +93,6 @@ public class Main extends Application {
         stage.show();
         stage.setOnCloseRequest(e -> db.disconnect());
     }
-
-    // ════════════════════════════════════════════════════════════════════
-    //  Main 自身的事件订阅
-    // ════════════════════════════════════════════════════════════════════
 
     private void wireMainSubscriptions() {
         bus.subscribe(EventType.STATUS_UPDATE,
@@ -165,10 +143,6 @@ public class Main extends Application {
             primaryStage.setScene(gameScene);
         }));
     }
-
-    // ════════════════════════════════════════════════════════════════════
-    //  游戏流程
-    // ════════════════════════════════════════════════════════════════════
 
     private void startNewGame() {
         gameState.generateNewMap();
@@ -222,10 +196,6 @@ public class Main extends Application {
         loginScene = new Scene(loginPanel, W, H);
     }
 
-    // ════════════════════════════════════════════════════════════════════
-    //  键盘输入
-    // ════════════════════════════════════════════════════════════════════
-
     private void handleKey(String key) {
         if (mazeInProgress) {
             switch (key) {
@@ -245,10 +215,6 @@ public class Main extends Application {
         }
         if (currentMaze != null && mazeInProgress) handleMove(dr, dc);
     }
-
-    // ════════════════════════════════════════════════════════════════════
-    //  迷宫内逻辑
-    // ════════════════════════════════════════════════════════════════════
 
     private void handleMove(int dr, int dc) {
         int oldR  = currentMaze.getPlayerRow();
@@ -285,7 +251,7 @@ public class Main extends Application {
         currentMaze.carveCell(targetR, targetC);
         currentMaze.movePlayer(dr, dc);
         currentMaze.movePlayer(dr, dc);
-        player.consumeWallPass();                        // ← wallPassActive = false
+        player.consumeWallPass();
         bus.publish(EventType.STATUS_UPDATE, "🧱 Wall Pass used! You phased through a wall!");
         publishBuffChanged();
         return true;
@@ -315,15 +281,15 @@ public class Main extends Application {
         String key = r + "," + c;
         if (itemsOnMap.containsKeyObj(key)) {
             Item.ItemType type = itemsOnMap.remove(key);
-            player.addItem(type);                        // ← playerItems.put(type, cur + 1)
+            player.addItem(type);
             bus.publish(EventType.ITEM_PICKUP, type.name());
             bus.publish(EventType.STATUS_UPDATE,
                     "Picked up: " + type.icon + " " + type.displayName
                             + "! Press " + itemKeyHint(type) + " to use.");
             bus.publish(EventType.INVENTORY_CHANGED);
         }
-        if (player.isSpeedBoostActive()) {               // ← speedBoostTicks > 0
-            int remaining = player.tickSpeedBoost();     // ← speedBoostTicks--
+        if (player.isSpeedBoostActive()) {
+            int remaining = player.tickSpeedBoost();
             if (remaining <= 0) {
                 bus.publish(EventType.STATUS_UPDATE, "Speed Boost expired.");
                 bus.publish(EventType.ITEM_EXPIRE, Item.ItemType.SPEED_BOOST.name());
@@ -354,24 +320,24 @@ public class Main extends Application {
     }
 
     private void useItemInMaze(Item.ItemType type) {
-        if (player.getItemCount(type) <= 0) {            // ← playerItems.get(type)
+        if (player.getItemCount(type) <= 0) {
             bus.publish(EventType.STATUS_UPDATE,
                     "You don't have " + type.displayName + "! Pick one up in the maze.");
             return;
         }
         switch (type) {
             case SPEED_BOOST:
-                player.useItem(type);                    // ← playerItems.put(type, count - 1)
-                player.activateSpeedBoost(Player.SPEED_BOOST_DURATION); // ← speedBoostTicks = 10
+                player.useItem(type);
+                player.activateSpeedBoost(Player.SPEED_BOOST_DURATION);
                 bus.publish(EventType.STATUS_UPDATE,
                         "⚡ Speed Boost activated! Double-step for 10 moves!");
                 break;
             case WALL_PASS:
-                if (player.isWallPassActive()) {         // ← wallPassActive
+                if (player.isWallPassActive()) {
                     bus.publish(EventType.STATUS_UPDATE, "🧱 Wall Pass already ready!"); return;
                 }
                 player.useItem(type);
-                player.activateWallPass();               // ← wallPassActive = true
+                player.activateWallPass();
                 bus.publish(EventType.STATUS_UPDATE,
                         "🧱 Wall Pass ready! Move towards a wall to phase through it!");
                 break;
@@ -397,10 +363,9 @@ public class Main extends Application {
         publishBuffChanged();
     }
 
-    /** Supplier 实现：将 player.getInventory() 转为 InventoryPanel.Item 列表。 */
     private ArrayList<InventoryPanel.Item> buildInventoryItems() {
         ArrayList<InventoryPanel.Item> list = new ArrayList<>();
-        for (Model.Item item : player.getInventory()) {  // ← 直接用 Player 的背包
+        for (Model.Item item : player.getInventory()) {
             list.add(new InventoryPanel.Item(
                     item.getName(), "Consumable", rarityForType(item.getType()), item.getQuantity()));
         }
@@ -409,18 +374,14 @@ public class Main extends Application {
 
     private void publishBuffChanged() {
         StringBuilder sb = new StringBuilder();
-        int ticks = player.getSpeedBoostTicks();         // ← speedBoostTicks
+        int ticks = player.getSpeedBoostTicks();
         if (ticks > 0) sb.append("⚡Speed(").append(ticks).append(')');
-        if (player.isWallPassActive()) {                 // ← wallPassActive
+        if (player.isWallPassActive()) {
             if (sb.length() > 0) sb.append(',');
             sb.append("🧱WallPass");
         }
         bus.publish(EventType.BUFF_CHANGED, sb.toString());
     }
-
-    // ════════════════════════════════════════════════════════════════════
-    //  迷宫 spawn / render（不变）
-    // ════════════════════════════════════════════════════════════════════
 
     private void spawnEnemies() {
         enemies = new ArrayList<>();
@@ -548,10 +509,6 @@ public class Main extends Application {
         }
     }
 
-    // ════════════════════════════════════════════════════════════════════
-    //  场景构建
-    // ════════════════════════════════════════════════════════════════════
-
     private void buildGameScene() {
         playerHUD        = new PlayerHUD(gameState);
         levelPanel       = new LevelPanel(gameState);
@@ -565,10 +522,6 @@ public class Main extends Application {
         gameScene.setFill(Color.web("#13131f"));
         gameScene.setOnKeyPressed(e -> handleKey(e.getCode().toString()));
     }
-
-    // ════════════════════════════════════════════════════════════════════
-    //  Layout
-    // ════════════════════════════════════════════════════════════════════
 
     private BorderPane buildLayout() {
         BorderPane root = new BorderPane();
@@ -634,10 +587,6 @@ public class Main extends Application {
         bar.getChildren().add(statusLabel);
         return bar;
     }
-
-    // ════════════════════════════════════════════════════════════════════
-    //  工具方法
-    // ════════════════════════════════════════════════════════════════════
 
     private void loadHistoricalScores() {
         ArrayList<DBManager.ScoreRecord> rows = db.loadAllScores();

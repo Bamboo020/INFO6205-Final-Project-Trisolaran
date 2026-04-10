@@ -21,20 +21,6 @@ import javafx.scene.text.FontWeight;
 
 import java.util.function.Supplier;
 
-/**
- * InventoryPanel — 背包面板。
- *
- * 重构后通过 GameEvent.Bus 自我刷新，外部无需调用任何方法。
- *
- * 关键变化：
- *   构造函数新增 {@code Supplier<ArrayList<Item>> itemSupplier} 参数。
- *   Main 传入 {@code this::buildInventoryItems}，当收到 INVENTORY_CHANGED
- *   事件时面板自动调用 Supplier 获取最新道具列表并重绘，无需外部推送。
- *
- * 订阅事件：
- *   INVENTORY_CHANGED → 调用 supplier 刷新道具列表
- *   MAP_GENERATED     → 清空背包（开始新地图时无道具）
- */
 public class InventoryPanel extends VBox {
 
     private static final String BG      = "#13131f";
@@ -80,10 +66,6 @@ public class InventoryPanel extends VBox {
     private ArrayList<Item> items   = new ArrayList<>();
     private SortKey         sortKey = SortKey.TYPE;
 
-    /**
-     * @param gameState    游戏状态（面板本身暂不使用，保留供未来扩展）
-     * @param itemSupplier 由 Main 提供的道具列表生产者，INVENTORY_CHANGED 时调用
-     */
     public InventoryPanel(GameStateController gameState,
                           Supplier<ArrayList<Item>> itemSupplier) {
         this.gameState    = gameState;
@@ -122,9 +104,8 @@ public class InventoryPanel extends VBox {
 
         getChildren().addAll(invHeader, sortRow, countLabel, invScroll, guideHeader, guideScroll);
 
-        renderItems(); // 初始渲染（空列表）
+        renderItems();
 
-        // ── 订阅事件 ────────────────────────────────────────────────────
         GameEvent.Bus bus = GameEvent.Bus.get();
 
         bus.subscribe(EventType.INVENTORY_CHANGED, e -> Platform.runLater(() -> {
@@ -137,8 +118,6 @@ public class InventoryPanel extends VBox {
             renderItems();
         }));
     }
-
-    // ── Render ───────────────────────────────────────────────────────────
 
     private void renderItems() {
         itemListBox.getChildren().clear();
@@ -155,8 +134,6 @@ public class InventoryPanel extends VBox {
         countLabel.setText(sorted.size() + " type" + (sorted.size() > 1 ? "s" : ""));
         for (Item item : sorted) itemListBox.getChildren().add(buildItemRow(item));
     }
-
-    // ── Item Guide ───────────────────────────────────────────────────────
 
     private VBox buildGuideContent() {
         VBox box = new VBox(6);
@@ -232,8 +209,6 @@ public class InventoryPanel extends VBox {
         return row;
     }
 
-    // ── Inventory rows ───────────────────────────────────────────────────
-
     private ArrayList<Item> sortedItems() {
         ArrayList<Item> copy = new ArrayList<>();
         for (Item item : items) copy.add(item);
@@ -299,8 +274,6 @@ public class InventoryPanel extends VBox {
         return row;
     }
 
-    // ── UI builders ──────────────────────────────────────────────────────
-
     private VBox buildSectionHeader(String title, String subtitle) {
         VBox header = new VBox(2);
         header.setPadding(new Insets(8, 10, 6, 10));
@@ -342,8 +315,6 @@ public class InventoryPanel extends VBox {
         btn.setOnMouseExited (e -> { btn.setStyle(n); btn.setTextFill(Color.web(TEXT));       });
         return btn;
     }
-
-    // ── Lookup helpers ───────────────────────────────────────────────────
 
     private String rarityColour(String rarity) {
         switch (rarity) { case "Epic": return PURPLE; case "Rare": return BLUE; default: return DIM; }

@@ -7,19 +7,8 @@ import Model.Level;
 
 import java.util.Random;
 
-/**
- * Randomly generated level-selection map.
- *
- * Structure:
- *   - START node at the root
- *   - 3-4 initial branches from START, each 3-6 nodes long
- *   - 25% fork chance per non-terminal node (only when >= 4 nodes remain)
- *
- * Uses Tree<Level> (Implementation.Tree) as the backing structure.
- */
 public class GameMap {
 
-    // Canvas layout constants (used by LevelPanel)
     public static final double CANVAS_W    = 210;
     public static final double CANVAS_H    = 460;
     public static final double NODE_RADIUS = 9;
@@ -39,21 +28,17 @@ public class GameMap {
         random    = new Random();
     }
 
-    /**
-     * Generates a new random map and computes rendering positions.
-     * Safe to call multiple times.
-     */
     public void generate() {
         parentMap = new HashMap<>();
         positions = new HashMap<>();
         nextId    = 1;
         tree      = new Tree<>();
-        startNode = new Level();            // START node (id=0)
+        startNode = new Level();
         tree.setRoot(startNode);
 
-        int N = 3 + random.nextInt(2);      // 3 or 4 initial paths
+        int N = 3 + random.nextInt(2);
         for (int i = 0; i < N; i++) {
-            int pathLen = 3 + random.nextInt(4);   // 3–6 nodes per path
+            int pathLen = 3 + random.nextInt(4);
             buildChain(startNode, pathLen);
         }
 
@@ -86,8 +71,6 @@ public class GameMap {
         }
     }
 
-    // ──── Position computation ────
-
     private void computePositions() {
         assignPosition(startNode, 0, CANVAS_W, 0);
     }
@@ -106,8 +89,6 @@ public class GameMap {
                     left + i * sliceW, left + (i + 1) * sliceW, depth + 1);
         }
     }
-
-    // ──── Public API ────
 
     public Level getStartNode() { return startNode; }
 

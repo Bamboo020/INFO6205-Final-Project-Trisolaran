@@ -4,21 +4,7 @@ import Implementation.ArrayList;
 
 import java.sql.*;
 
-/**
- * Manages all MySQL database operations.
- *
- * Covers:
- *   - Connection management
- *   - User registration / login / logout
- *   - Score persistence (save + load into MaxHeap / AVLTree)
- *
- * Change DB_URL / DB_USER / DB_PASS to match your MySQL setup.
- */
 public class DBManager {
-
-    // ------------------------------------------------------------------ //
-    //  Connection config  ← change these to match your MySQL setup
-    // ------------------------------------------------------------------ //
 
     private static final String DB_URL  = "jdbc:mysql://localhost:3306/maze_explorer"
             + "?useSSL=false&serverTimezone=UTC"
@@ -26,22 +12,8 @@ public class DBManager {
     private static final String DB_USER = "root";
     private static final String DB_PASS = "Bxh12230102.";   // ← change this
 
-    // ------------------------------------------------------------------ //
-    //  Singleton connection
-    // ------------------------------------------------------------------ //
-
     private Connection connection = null;
 
-    // ------------------------------------------------------------------ //
-    //  Connection
-    // ------------------------------------------------------------------ //
-
-    /**
-     * Opens the database connection.
-     * Call once at application startup.
-     *
-     * @return null on success, or error message on failure
-     */
     public String connect() {
         try {
             Class.forName("com.mysql.cj.jdbc.Driver");
@@ -55,10 +27,6 @@ public class DBManager {
         }
     }
 
-    /**
-     * Closes the database connection.
-     * Call on application shutdown.
-     */
     public void disconnect() {
         try {
             if (connection != null && !connection.isClosed()) {
@@ -67,7 +35,6 @@ public class DBManager {
         } catch (SQLException ignored) {}
     }
 
-    /** Returns true if the database is connected and ready. */
     public boolean isConnected() {
         try {
             return connection != null && !connection.isClosed();
@@ -76,14 +43,6 @@ public class DBManager {
         }
     }
 
-    // ------------------------------------------------------------------ //
-    //  Table initialisation
-    // ------------------------------------------------------------------ //
-
-    /**
-     * Creates the users and scores tables if they don't already exist.
-     * Safe to call every startup.
-     */
     private void initTables() throws SQLException {
         try (Statement stmt = connection.createStatement()) {
 
@@ -108,17 +67,7 @@ public class DBManager {
         }
     }
 
-    // ------------------------------------------------------------------ //
-    //  User registration
-    // ------------------------------------------------------------------ //
-
-    /**
-     * Registers a new user with the given username and password.
-     *
-     * @return null on success, or an error message on failure
-     */
     public String register(String username, String password, String confirmPassword) {
-        // Input validation
         if (username == null || username.isBlank())
             return "Username cannot be empty.";
         if (username.length() < 3)
@@ -132,7 +81,6 @@ public class DBManager {
 
         if (!isConnected()) return "Database not connected.";
 
-        // Check if username already exists
         try (PreparedStatement check = connection.prepareStatement(
                 "SELECT id FROM users WHERE username = ?")) {
             check.setString(1, username);
@@ -142,27 +90,17 @@ public class DBManager {
             return "Database error: " + e.getMessage();
         }
 
-        // Insert new user
         try (PreparedStatement insert = connection.prepareStatement(
                 "INSERT INTO users (username, password) VALUES (?, ?)")) {
             insert.setString(1, username);
             insert.setString(2, password);   // plain text (sufficient for course project)
             insert.executeUpdate();
-            return null;   // success
+            return null;
         } catch (SQLException e) {
             return "Registration failed: " + e.getMessage();
         }
     }
 
-    // ------------------------------------------------------------------ //
-    //  User login
-    // ------------------------------------------------------------------ //
-
-    /**
-     * Validates login credentials against the database.
-     *
-     * @return null on success, or an error message on failure
-     */
     public String login(String username, String password) {
         if (username == null || username.isBlank())
             return "Please enter your username.";
@@ -181,23 +119,12 @@ public class DBManager {
             if (!rs.getString("password").equals(password))
                 return "Incorrect password.";
 
-            return null;   // success
+            return null;
         } catch (SQLException e) {
             return "Login failed: " + e.getMessage();
         }
     }
 
-    // ------------------------------------------------------------------ //
-    //  Score persistence
-    // ------------------------------------------------------------------ //
-
-    /**
-     * Saves a completed path score to the scores table.
-     *
-     * @param username  the logged-in player
-     * @param score     final accumulated path score
-     * @param levelId   last node's level id
-     */
     public void saveScore(String username, int score, int levelId) {
         if (!isConnected()) return;
         try (PreparedStatement stmt = connection.prepareStatement(
@@ -211,10 +138,6 @@ public class DBManager {
         }
     }
 
-    /**
-     * Loads all historical scores from the database in descending order.
-     * Called at startup to restore MaxHeap and AVLTree state.
-     */
     public ArrayList<ScoreRecord> loadAllScores() {
         ArrayList<ScoreRecord> records = new ArrayList<>();
         if (!isConnected()) return records;
@@ -237,9 +160,6 @@ public class DBManager {
         return records;
     }
 
-    /**
-     * Loads the top-N scores from the database for the leaderboard display.
-     */
     public ArrayList<ScoreRecord> loadTopScores(int limit) {
         ArrayList<ScoreRecord> records = new ArrayList<>();
         if (!isConnected()) return records;
@@ -263,11 +183,6 @@ public class DBManager {
         return records;
     }
 
-    // ------------------------------------------------------------------ //
-    //  Inner data class
-    // ------------------------------------------------------------------ //
-
-    /** Lightweight container for a row from the scores table. */
     public static class ScoreRecord {
         public final String username;
         public final int    score;

@@ -1,12 +1,5 @@
 package Implementation;
 
-/**
- * Self-balancing AVL Tree (key-value map).
- * Used to store game score history and support O(log n + k) range queries.
- *
- * @param <K> key type, must be Comparable
- * @param <V> value type
- */
 public class AVLTree<K extends Comparable<K>, V> {
 
     class Node {
@@ -19,13 +12,11 @@ public class AVLTree<K extends Comparable<K>, V> {
     Node root;
     private int size;
 
-    /** Inserts or updates the key-value pair. O(log n) */
     public void put(K key, V value) {
         if (key == null) throw new IllegalArgumentException("Key cannot be null");
         root = put(root, key, value);
     }
 
-    /** Returns the value for {@code key}, or null if absent. O(log n) */
     public V get(K key) {
         Node n = root;
         while (n != null) {
@@ -37,22 +28,16 @@ public class AVLTree<K extends Comparable<K>, V> {
         return null;
     }
 
-    /** Deletes the node with the given key (no-op if absent). O(log n) */
     public void delete(K key) {
         if (get(key) != null) { root = delete(root, key); size--; }
     }
 
-    /**
-     * Returns all values whose keys fall in [lo, hi] inclusive.
-     * O(log n + k)
-     */
     public ArrayList<V> rangeQuery(K lo, K hi) {
         ArrayList<V> result = new ArrayList<>();
         rangeQuery(root, lo, hi, result);
         return result;
     }
 
-    /** Returns the balance factor of a node (left height − right height). */
     public int balanceFactor(Node n) {
         if (n == null) return 0;
         return height(n.left) - height(n.right);
@@ -60,8 +45,6 @@ public class AVLTree<K extends Comparable<K>, V> {
 
     public int     size()    { return size;      }
     public boolean isEmpty() { return size == 0; }
-
-    // ──── Rotations ────
 
     Node rotateLeft(Node x) {
         Node y = x.right; Node b = y.left;
@@ -76,8 +59,6 @@ public class AVLTree<K extends Comparable<K>, V> {
         updateHeight(y); updateHeight(x);
         return x;
     }
-
-    // ──── Private helpers ────
 
     private int height(Node n) { return (n == null) ? 0 : n.height; }
 

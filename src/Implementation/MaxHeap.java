@@ -1,18 +1,11 @@
 package Implementation;
 
-/**
- * Array-based generic Max-Heap.
- * Used by the leaderboard to maintain and display the top-K scores.
- * Internal storage uses a plain Object array – 1-indexed.
- *
- * @param <T> element type, must be Comparable
- */
 @SuppressWarnings("unchecked")
 public class MaxHeap<T extends Comparable<T>> {
 
     private static final int DEFAULT_CAPACITY = 16;
 
-    private Object[] heap;   // 1-indexed; heap[0] unused
+    private Object[] heap;
     private int size;
 
     public MaxHeap() {
@@ -20,7 +13,6 @@ public class MaxHeap<T extends Comparable<T>> {
         size = 0;
     }
 
-    /** Inserts an item. O(log n) */
     public void insert(T item) {
         if (item == null) throw new IllegalArgumentException("Null items not allowed");
         if (size + 1 == heap.length) resize(heap.length * 2);
@@ -28,7 +20,6 @@ public class MaxHeap<T extends Comparable<T>> {
         heapifyUp(size);
     }
 
-    /** Removes and returns the maximum element. O(log n) */
     public T extractMax() {
         if (isEmpty()) throw new java.util.NoSuchElementException("Heap is empty");
         T max = (T) heap[1];
@@ -38,11 +29,6 @@ public class MaxHeap<T extends Comparable<T>> {
         return max;
     }
 
-    /** Returns the maximum element without removing it. O(1) */
-    /**
-     * Returns a snapshot list of the top-{@code k} elements in descending order.
-     * Heap state is fully restored after the call. O(k log n)
-     */
     public ArrayList<T> topK(int k) {
         k = Math.min(k, size);
         ArrayList<T> extracted = new ArrayList<>(k);

@@ -9,16 +9,6 @@ import Interface.ListInterface;
 import Interface.MazeModel;
 import Interface.SetInterface;
 
-/**
- * PathFinder —— 路径搜索工具
- *
- * 已修改：
- *   - ArrayList   替代 java.util.ArrayList / java.util.List
- *   - HashSet     替代 java.util.HashSet / java.util.Set
- *   - Queue       替代 java.util.LinkedList (Queue 用法)
- *   - HashMap     替代 java.util.HashMap / java.util.Map
- *   - 手动填充数组替代 java.util.Arrays.fill
- */
 public class PathFinder {
 
     private static class DijkstraEntry implements Comparable<DijkstraEntry> {
@@ -69,15 +59,13 @@ public class PathFinder {
             if (visited[r][c]) continue;
             visited[r][c] = true;
 
-            // 到达终点，提前结束
             if (r == tgtRow && c == tgtCol) break;
 
-            // 松弛相邻边（通过 MazeModel.getNeighbors 获取可通行邻居）
             for (int[] nb : maze.getNeighbors(r, c)) {
                 int nr = nb[0], nc = nb[1];
                 if (visited[nr][nc]) continue;
 
-                double newDist = dist[r][c] + 1.0; // 无权图，边权为 1
+                double newDist = dist[r][c] + 1.0;
                 if (newDist < dist[nr][nc]) {
                     dist[nr][nc] = newDist;
                     prevRow[nr][nc] = r;
@@ -87,7 +75,6 @@ public class PathFinder {
             }
         }
 
-        // 回溯路径
         return reconstructPath(prevRow, prevCol, srcRow, srcCol, tgtRow, tgtCol);
     }
 

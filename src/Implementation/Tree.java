@@ -1,12 +1,5 @@
 package Implementation;
 
-/**
- * Generic general tree for level progression.
- * Each node can have any number of children.
- * Supports pre-order DFS traversal for GUI display.
- *
- * @param <T> the type of data stored in each node
- */
 public class Tree<T> {
 
     private static class Node<T> {
@@ -32,25 +25,15 @@ public class Tree<T> {
         size = 1;
     }
 
-    /** Returns the root value, or null if the tree is empty. O(1) */
     public T getRoot() {
         return (root == null) ? null : root.data;
     }
 
-    /**
-     * Sets the root. Replaces any existing root and its subtree.
-     */
     public void setRoot(T rootData) {
         root = new Node<>(rootData);
         size = 1;
     }
 
-    /**
-     * Adds a child to the node whose data equals {@code parent}.
-     * DFS to locate the parent. O(n)
-     *
-     * @throws IllegalArgumentException if parent is not found
-     */
     public void addChild(T parent, T child) {
         if (root == null) {
             root = new Node<>(parent);
@@ -64,12 +47,6 @@ public class Tree<T> {
         size++;
     }
 
-    /**
-     * Returns the direct children of the node whose data equals {@code node}.
-     * O(1) return; O(n) to find the node.
-     *
-     * @throws IllegalArgumentException if node is not found
-     */
     public ArrayList<T> getChildren(T node) {
         Node<T> target = findNode(root, node);
         if (target == null) {
@@ -82,9 +59,6 @@ public class Tree<T> {
         return result;
     }
 
-    /**
-     * Returns all values in pre-order (root → children left-to-right). O(n)
-     */
     public ArrayList<T> preOrder() {
         ArrayList<T> result = new ArrayList<>();
         preOrderHelper(root, result);

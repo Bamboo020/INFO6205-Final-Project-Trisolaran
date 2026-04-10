@@ -2,10 +2,6 @@ package Implementation;
 
 import Interface.UnionFindInterface;
 
-/**
- * UnionFind —— 带路径压缩与按秩合并的并查集
- * 用于 Kruskal 迷宫生成的环检测
- */
 public class UnionFind implements UnionFindInterface {
 
     private final int[] parent;
@@ -17,18 +13,12 @@ public class UnionFind implements UnionFindInterface {
         for (int i = 0; i < n; i++) parent[i] = i;
     }
 
-    /**
-     * 找根节点（路径压缩）
-     */
     @Override
     public int find(int x) {
         if (parent[x] != x) parent[x] = find(parent[x]);
         return parent[x];
     }
 
-    /**
-     * 合并两个集合；返回是否合并成功（false 表示已在同一集合）
-     */
     public boolean union(int x, int y) {
         int px = find(x), py = find(y);
         if (px == py) return false;

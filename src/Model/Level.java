@@ -1,12 +1,5 @@
 package Model;
 
-/**
- * Represents a single node in the level-selection map.
- * Difficulty is fixed at map-generation time.
- *
- * Scoring: EASY = 20 pts | MEDIUM = 30 pts | HARD = 50 pts
- * The special START node (levelId = 0) has null difficulty and 0 score.
- */
 public class Level {
 
     public enum Difficulty { EASY, MEDIUM, HARD }
@@ -15,14 +8,12 @@ public class Level {
     private final Difficulty difficulty;
     private boolean          completed;
 
-    /** Creates the special START node. */
     public Level() {
         this.levelId    = 0;
         this.difficulty = null;
         this.completed  = false;
     }
 
-    /** Creates a regular level node. */
     public Level(int levelId, Difficulty difficulty) {
         this.levelId    = levelId;
         this.difficulty = difficulty;

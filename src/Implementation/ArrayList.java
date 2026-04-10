@@ -5,11 +5,6 @@ import Interface.ListInterface;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
 
-/**
- * ArrayList —— 基于动态数组的 ListInterface 实现
- * 替代 java.util.ArrayList
- * 初始容量 10，空间不足时扩容为 1.5 倍
- */
 public class ArrayList<T> implements ListInterface<T> {
 
     private static final int DEFAULT_CAPACITY = 10;
@@ -27,8 +22,6 @@ public class ArrayList<T> implements ListInterface<T> {
         this.data = new Object[initialCapacity];
         this.size = 0;
     }
-
-    // -------- ListInterface 实现 --------
 
     @Override
     public void add(T element) {
@@ -120,9 +113,6 @@ public class ArrayList<T> implements ListInterface<T> {
         return new ArrayListIterator();
     }
 
-    // -------- 额外公开方法 --------
-
-    /** 返回子列表（浅拷贝），范围 [fromIndex, toIndex) */
     @SuppressWarnings("unchecked")
     public ArrayList<T> subList(int fromIndex, int toIndex) {
         if (fromIndex < 0 || toIndex > size || fromIndex > toIndex)
@@ -133,8 +123,6 @@ public class ArrayList<T> implements ListInterface<T> {
         }
         return sub;
     }
-
-    // -------- 私有辅助 --------
 
     private void ensureCapacity(int minCapacity) {
         if (minCapacity > data.length) {
@@ -150,8 +138,6 @@ public class ArrayList<T> implements ListInterface<T> {
         if (index < 0 || index >= size)
             throw new IndexOutOfBoundsException("Index: " + index + ", Size: " + size);
     }
-
-    // -------- 迭代器 --------
 
     private class ArrayListIterator implements Iterator<T> {
         private int cursor = 0;

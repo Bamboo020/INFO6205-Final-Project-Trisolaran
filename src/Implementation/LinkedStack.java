@@ -4,15 +4,7 @@ import Interface.StackInterface;
 
 import java.util.NoSuchElementException;
 
-/**
- * LinkedStack - Singly-linked-list implementation of StackADT.
- * Used to store the player's movement history for undo/backtracking.
- *
- * @param <T> the type of elements in the stack
- */
 public class LinkedStack<T> implements StackInterface<T> {
-
-    /** Node in the linked list. */
     private static class Node<T> {
         T data;
         Node<T> next;

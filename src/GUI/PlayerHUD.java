@@ -17,13 +17,6 @@ import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
 
-/**
- * PlayerHUD — 顶部状态栏。
- *
- * 重构后通过 GameEvent.Bus 自我刷新，外部无需调用任何方法。
- * 订阅事件：LIVES_CHANGED / SCORE_CHANGED / NODE_ENTERED / NODE_COMPLETED /
- *           MAP_GENERATED / BUFF_CHANGED
- */
 public class PlayerHUD extends HBox {
 
     private static final String BG     = "#13131f";
@@ -90,7 +83,6 @@ public class PlayerHUD extends HBox {
                 spacer
         );
 
-        // ── 订阅事件（构造一次，永久生效）──────────────────────────────
         GameEvent.Bus bus = GameEvent.Bus.get();
 
         bus.subscribe(EventType.LIVES_CHANGED,
@@ -110,12 +102,9 @@ public class PlayerHUD extends HBox {
         bus.subscribe(EventType.MAP_GENERATED,
                 e -> Platform.runLater(this::resetToIdle));
 
-        // BUFF_CHANGED data = "⚡Speed(5),🧱WallPass" 或 ""
         bus.subscribe(EventType.BUFF_CHANGED,
                 e -> Platform.runLater(() -> applyBuffs(e.getData())));
     }
-
-    // ── Private refresh ─────────────────────────────────────────────────
 
     private void refreshLives() {
         int lives    = gameState.getLives();
@@ -153,7 +142,6 @@ public class PlayerHUD extends HBox {
         nodeInfoLabel.setTextFill(Color.web(diffCol));
     }
 
-    /** data = "" 表示无 buff；否则为逗号分隔的 buff 名称列表。 */
     private void applyBuffs(String data) {
         buffBox.getChildren().clear();
         if (data == null || data.isEmpty()) {
@@ -173,8 +161,6 @@ public class PlayerHUD extends HBox {
         nodeInfoLabel.setTextFill(Color.web(DIM));
         applyBuffs("");
     }
-
-    // ── UI helpers ───────────────────────────────────────────────────────
 
     private VBox hudCell(Label header, javafx.scene.Node... content) {
         VBox cell = new VBox(2);
