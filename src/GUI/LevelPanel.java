@@ -1,11 +1,14 @@
 package GUI;
 
+import Model.GameEvent;
+import Model.GameEvent.EventType;
 import Model.Level;
 import World.GameMap;
 import World.GameStateController;
 
 import Implementation.ArrayList;
 
+import javafx.application.Platform;
 import javafx.geometry.Insets;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
@@ -17,15 +20,11 @@ import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
 
 /**
- * C7 – Level-selection map panel.
+ * LevelPanel — 左侧关卡地图面板。
  *
- * Renders the randomly generated GameMap on a Canvas:
- *   Green  = EASY (+20 pts)
- *   Yellow = MEDIUM (+30 pts)
- *   Red    = HARD (+50 pts)
- *   Blue   = START
- *
- * Clicking an available node fires the onNodeSelected callback.
+ * 重构后通过 GameEvent.Bus 自我刷新，外部无需调用任何方法。
+ * 订阅事件：MAP_GENERATED / NODE_ENTERED / NODE_COMPLETED / NODE_FAILED /
+ *           LIVES_CHANGED / SCORE_CHANGED
  */
 public class LevelPanel extends VBox {
 
@@ -59,10 +58,8 @@ public class LevelPanel extends VBox {
 
         setPrefWidth(220);
         setSpacing(0);
-        setStyle("-fx-background-color: #13131f;"
-                + "-fx-border-color: #383860; -fx-border-width: 0 2 0 0;");
-
-        VBox header = buildHeader();
+        setStyle("-fx-background-color:#13131f;"
+                + "-fx-border-color:#383860;-fx-border-width:0 2 0 0;");
 
         livesLabel = new Label("♥ ♥ ♥");
         livesLabel.setFont(Font.font("Arial", FontWeight.BOLD, 14));
@@ -74,26 +71,37 @@ public class LevelPanel extends VBox {
 
         VBox statusBox = new VBox(3, livesLabel, scoreLabel);
         statusBox.setPadding(new Insets(7, 12, 7, 12));
-        statusBox.setStyle("-fx-background-color: #1a1a2e; -fx-border-color: #383860; -fx-border-width: 0 0 1 0;");
+        statusBox.setStyle("-fx-background-color:#1a1a2e;"
+                + "-fx-border-color:#383860;-fx-border-width:0 0 1 0;");
 
         mapCanvas = new Canvas(GameMap.CANVAS_W, GameMap.CANVAS_H);
         mapCanvas.setOnMouseClicked(e -> handleClick(e.getX(), e.getY()));
 
         VBox canvasBox = new VBox(mapCanvas);
-        canvasBox.setStyle("-fx-background-color: #0d0d1a;");
+        canvasBox.setStyle("-fx-background-color:#0d0d1a;");
         VBox.setVgrow(canvasBox, Priority.ALWAYS);
 
-        getChildren().addAll(header, statusBox, canvasBox, buildLegend());
+        getChildren().addAll(buildHeader(), statusBox, canvasBox, buildLegend());
+
+        // ── 订阅事件 ────────────────────────────────────────────────────
+        GameEvent.Bus bus = GameEvent.Bus.get();
+
+        // 地图结构变化 → 重绘整张地图
+        bus.subscribe(EventType.MAP_GENERATED,   e -> Platform.runLater(this::drawMap));
+        bus.subscribe(EventType.NODE_ENTERED,    e -> Platform.runLater(this::drawMap));
+        bus.subscribe(EventType.NODE_COMPLETED,  e -> Platform.runLater(this::drawMap));
+        bus.subscribe(EventType.NODE_FAILED,     e -> Platform.runLater(this::drawMap));
+        bus.subscribe(EventType.GAME_OVER,       e -> Platform.runLater(this::drawMap));
+
+        // 状态标签变化 → 更新生命/分数显示
+        bus.subscribe(EventType.LIVES_CHANGED,   e -> Platform.runLater(this::updateStatusLabels));
+        bus.subscribe(EventType.SCORE_CHANGED,   e -> Platform.runLater(this::updateStatusLabels));
+        bus.subscribe(EventType.NODE_COMPLETED,  e -> Platform.runLater(this::updateStatusLabels));
     }
 
     public void setOnNodeSelected(NodeSelectCallback cb) { this.onNodeSelected = cb; }
 
-    public void refresh() {
-        updateStatusLabels();
-        drawMap();
-    }
-
-    // ──── Drawing ────
+    // ── Drawing ──────────────────────────────────────────────────────────
 
     private void drawMap() {
         GraphicsContext gc = mapCanvas.getGraphicsContext2D();
@@ -104,15 +112,14 @@ public class LevelPanel extends VBox {
         if (map == null) {
             gc.setFill(COL_TEXT);
             gc.setFont(Font.font("Arial", 14));
-            gc.fillText("No map generated.\nPress  [ New Game ].", 20, 200);
+            gc.fillText("No map generated.\nPress  [ New Map ].", 20, 200);
             return;
         }
 
         Level            currentNode = gameState.getCurrentNode();
-        ArrayList<Level> avail      = map.getChildren(currentNode);
-        ArrayList<Level> allNodes   = map.getAllNodes();
+        ArrayList<Level> avail       = map.getChildren(currentNode);
+        ArrayList<Level> allNodes    = map.getAllNodes();
 
-        // Draw edges first
         for (Level node : allNodes) {
             double[] pPos = map.getPosition(node);
             if (pPos == null) continue;
@@ -124,7 +131,6 @@ public class LevelPanel extends VBox {
             }
         }
 
-        // Draw nodes on top
         for (Level node : allNodes) {
             double[] pos = map.getPosition(node);
             if (pos == null) continue;
@@ -193,7 +199,7 @@ public class LevelPanel extends VBox {
         }
     }
 
-    // ──── Click handling ────
+    // ── Click handling ───────────────────────────────────────────────────
 
     private void handleClick(double mx, double my) {
         GameMap map = gameState.getCurrentMap();
@@ -213,7 +219,7 @@ public class LevelPanel extends VBox {
         }
     }
 
-    // ──── Status labels ────
+    // ── Status labels ────────────────────────────────────────────────────
 
     private void updateStatusLabels() {
         int lives = gameState.getLives();
@@ -224,13 +230,13 @@ public class LevelPanel extends VBox {
         scoreLabel.setText("Path score: " + gameState.getAccumulatedScore());
     }
 
-    // ──── UI builders ────
+    // ── UI builders ──────────────────────────────────────────────────────
 
     private VBox buildHeader() {
         VBox header = new VBox(4);
         header.setPadding(new Insets(10, 12, 8, 12));
-        header.setStyle("-fx-background-color: #1a1a2e;"
-                + "-fx-border-color: #383860; -fx-border-width: 0 0 1 0;");
+        header.setStyle("-fx-background-color:#1a1a2e;"
+                + "-fx-border-color:#383860;-fx-border-width:0 0 1 0;");
 
         Label icon = new Label("MAP  —  Level Selection");
         icon.setFont(Font.font("Arial", FontWeight.BOLD, 14));
@@ -247,13 +253,13 @@ public class LevelPanel extends VBox {
     private VBox buildLegend() {
         VBox legend = new VBox(4);
         legend.setPadding(new Insets(6, 12, 8, 12));
-        legend.setStyle("-fx-background-color: #1a1a2e;"
-                + "-fx-border-color: #383860; -fx-border-width: 1 0 0 0;");
+        legend.setStyle("-fx-background-color:#1a1a2e;"
+                + "-fx-border-color:#383860;-fx-border-width:1 0 0 0;");
         legend.getChildren().addAll(
-                legendRow("● Easy   +20 pts",    "#6bcb77"),
-                legendRow("● Medium +30 pts",    "#ffd93d"),
-                legendRow("● Hard   +50 pts",    "#ff6b81"),
-                legendRow("○ Highlighted = available", "#43cfff")
+                legendRow("● Easy   +20 pts",              "#6bcb77"),
+                legendRow("● Medium +30 pts",              "#ffd93d"),
+                legendRow("● Hard   +50 pts",              "#ff6b81"),
+                legendRow("○ Highlighted = available",     "#43cfff")
         );
         return legend;
     }

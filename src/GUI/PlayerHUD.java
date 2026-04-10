@@ -1,10 +1,13 @@
 package GUI;
 
+import Model.GameEvent;
+import Model.GameEvent.EventType;
 import Model.Level;
 import World.GameStateController;
 
 import Interface.ListInterface;
 
+import javafx.application.Platform;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.Label;
@@ -15,8 +18,11 @@ import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
 
 /**
- * C9 – Player HUD (top bar).
- * Displays lives, accumulated score, current node info, and active buffs.
+ * PlayerHUD — 顶部状态栏。
+ *
+ * 重构后通过 GameEvent.Bus 自我刷新，外部无需调用任何方法。
+ * 订阅事件：LIVES_CHANGED / SCORE_CHANGED / NODE_ENTERED / NODE_COMPLETED /
+ *           MAP_GENERATED / BUFF_CHANGED
  */
 public class PlayerHUD extends HBox {
 
@@ -31,7 +37,6 @@ public class PlayerHUD extends HBox {
 
     private final GameStateController gameState;
 
-    private final Label       titleLabel;
     private final Label       livesLabel;
     private final ProgressBar hpBar;
     private final Label       scoreLabel;
@@ -44,11 +49,11 @@ public class PlayerHUD extends HBox {
         setSpacing(0);
         setPadding(new Insets(0));
         setAlignment(Pos.CENTER_LEFT);
-        setStyle("-fx-background-color: " + BG + ";"
-                + "-fx-border-color: " + BORDER + ";"
-                + "-fx-border-width: 0 0 2 0;");
+        setStyle("-fx-background-color:" + BG
+                + ";-fx-border-color:" + BORDER
+                + ";-fx-border-width:0 0 2 0;");
 
-        titleLabel = new Label("⚔  MAZE EXPLORER RPG");
+        Label titleLabel = new Label("⚔  MAZE EXPLORER RPG");
         titleLabel.setFont(Font.font("Arial", FontWeight.BOLD, 17));
         titleLabel.setTextFill(Color.web(RED));
         titleLabel.setPadding(new Insets(10, 20, 10, 16));
@@ -59,54 +64,58 @@ public class PlayerHUD extends HBox {
 
         hpBar = new ProgressBar(1.0);
         hpBar.setPrefWidth(80); hpBar.setPrefHeight(8);
-        hpBar.setStyle("-fx-accent: " + RED + "; -fx-control-inner-background: #2a1a2a;");
-
-        VBox livesBox = hudCell(dimLabel("LIVES"), livesLabel, hpBar);
+        hpBar.setStyle("-fx-accent:" + RED + ";-fx-control-inner-background:#2a1a2a;");
 
         scoreLabel = new Label("0 pts");
         scoreLabel.setFont(Font.font("Courier New", FontWeight.BOLD, 16));
         scoreLabel.setTextFill(Color.web(GOLD));
-        VBox scoreBox = hudCell(dimLabel("PATH SCORE"), scoreLabel);
 
         nodeInfoLabel = new Label("—");
         nodeInfoLabel.setFont(Font.font("Arial", FontWeight.BOLD, 13));
         nodeInfoLabel.setTextFill(Color.web(TEXT));
-        VBox nodeBox = hudCell(dimLabel("CURRENT NODE"), nodeInfoLabel);
 
         buffBox = new HBox(6);
         buffBox.setAlignment(Pos.CENTER_LEFT);
-        Label buffNone = new Label("none");
-        buffNone.setFont(Font.font("Arial", 13));
-        buffNone.setTextFill(Color.web(DIM));
-        buffBox.getChildren().add(buffNone);
-        VBox buffSection = hudCell(dimLabel("ACTIVE BUFFS"), buffBox);
+        buffBox.getChildren().add(makeNoneLabel());
 
         Region spacer = new Region();
         HBox.setHgrow(spacer, Priority.ALWAYS);
 
         getChildren().addAll(
-                titleLabel, divider(), livesBox, divider(),
-                scoreBox, divider(), nodeBox, divider(), buffSection, spacer
+                titleLabel,                                     divider(),
+                hudCell(dimLabel("LIVES"),        livesLabel, hpBar), divider(),
+                hudCell(dimLabel("PATH SCORE"),   scoreLabel),        divider(),
+                hudCell(dimLabel("CURRENT NODE"), nodeInfoLabel),     divider(),
+                hudCell(dimLabel("ACTIVE BUFFS"), buffBox),
+                spacer
         );
+
+        // ── 订阅事件（构造一次，永久生效）──────────────────────────────
+        GameEvent.Bus bus = GameEvent.Bus.get();
+
+        bus.subscribe(EventType.LIVES_CHANGED,
+                e -> Platform.runLater(this::refreshLives));
+
+        bus.subscribe(EventType.SCORE_CHANGED,
+                e -> Platform.runLater(this::refreshScore));
+
+        bus.subscribe(EventType.NODE_ENTERED,
+                e -> Platform.runLater(this::refreshNodeInfo));
+
+        bus.subscribe(EventType.NODE_COMPLETED, e -> Platform.runLater(() -> {
+            refreshScore();
+            refreshNodeInfo();
+        }));
+
+        bus.subscribe(EventType.MAP_GENERATED,
+                e -> Platform.runLater(this::resetToIdle));
+
+        // BUFF_CHANGED data = "⚡Speed(5),🧱WallPass" 或 ""
+        bus.subscribe(EventType.BUFF_CHANGED,
+                e -> Platform.runLater(() -> applyBuffs(e.getData())));
     }
 
-    public void refresh() {
-        refreshLives();
-        refreshScore();
-        refreshNodeInfo();
-    }
-
-    public void setActiveBuffs(ListInterface<String> buffNames) {
-        buffBox.getChildren().clear();
-        if (buffNames == null || buffNames.isEmpty()) {
-            Label none = new Label("none");
-            none.setFont(Font.font("Arial", 13));
-            none.setTextFill(Color.web(DIM));
-            buffBox.getChildren().add(none);
-            return;
-        }
-        for (String buff : buffNames) buffBox.getChildren().add(buffChip(buff));
-    }
+    // ── Private refresh ─────────────────────────────────────────────────
 
     private void refreshLives() {
         int lives    = gameState.getLives();
@@ -115,10 +124,10 @@ public class PlayerHUD extends HBox {
         for (int i = 0; i < maxLives; i++) hearts.append(i < lives ? "♥ " : "♡ ");
         livesLabel.setText(hearts.toString().trim());
 
-        double ratio = (double) lives / maxLives;
+        double ratio    = (double) lives / maxLives;
+        String barColor = ratio > 0.6 ? GREEN : (ratio > 0.3 ? GOLD : RED);
         hpBar.setProgress(ratio);
-        String barColour = ratio > 0.6 ? GREEN : (ratio > 0.3 ? GOLD : RED);
-        hpBar.setStyle("-fx-accent: " + barColour + "; -fx-control-inner-background: #2a1a1a;");
+        hpBar.setStyle("-fx-accent:" + barColor + ";-fx-control-inner-background:#2a1a1a;");
     }
 
     private void refreshScore() {
@@ -144,6 +153,29 @@ public class PlayerHUD extends HBox {
         nodeInfoLabel.setTextFill(Color.web(diffCol));
     }
 
+    /** data = "" 表示无 buff；否则为逗号分隔的 buff 名称列表。 */
+    private void applyBuffs(String data) {
+        buffBox.getChildren().clear();
+        if (data == null || data.isEmpty()) {
+            buffBox.getChildren().add(makeNoneLabel());
+            return;
+        }
+        for (String buff : data.split(",")) {
+            String name = buff.trim();
+            if (!name.isEmpty()) buffBox.getChildren().add(buffChip(name));
+        }
+    }
+
+    private void resetToIdle() {
+        refreshLives();
+        refreshScore();
+        nodeInfoLabel.setText("—  select a node");
+        nodeInfoLabel.setTextFill(Color.web(DIM));
+        applyBuffs("");
+    }
+
+    // ── UI helpers ───────────────────────────────────────────────────────
+
     private VBox hudCell(Label header, javafx.scene.Node... content) {
         VBox cell = new VBox(2);
         cell.setPadding(new Insets(8, 16, 8, 16));
@@ -156,7 +188,7 @@ public class PlayerHUD extends HBox {
     private Region divider() {
         Region div = new Region();
         div.setPrefWidth(1); div.setPrefHeight(50);
-        div.setStyle("-fx-background-color: " + BORDER + ";");
+        div.setStyle("-fx-background-color:" + BORDER + ";");
         return div;
     }
 
@@ -167,15 +199,22 @@ public class PlayerHUD extends HBox {
         return lbl;
     }
 
+    private Label makeNoneLabel() {
+        Label lbl = new Label("none");
+        lbl.setFont(Font.font("Arial", 13));
+        lbl.setTextFill(Color.web(DIM));
+        return lbl;
+    }
+
     private Label buffChip(String text) {
         Label chip = new Label(text);
         chip.setFont(Font.font("Arial", FontWeight.BOLD, 12));
         chip.setTextFill(Color.web(BLUE));
         chip.setPadding(new Insets(2, 8, 2, 8));
-        chip.setStyle("-fx-background-color: #1a2a40;"
-                + "-fx-border-color: " + BLUE + ";"
-                + "-fx-border-width: 1;"
-                + "-fx-background-radius: 10; -fx-border-radius: 10;");
+        chip.setStyle("-fx-background-color:#1a2a40;"
+                + "-fx-border-color:" + BLUE + ";"
+                + "-fx-border-width:1;"
+                + "-fx-background-radius:10;-fx-border-radius:10;");
         return chip;
     }
 }

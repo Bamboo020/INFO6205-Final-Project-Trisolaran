@@ -1,11 +1,14 @@
 package GUI;
 
+import Model.GameEvent;
+import Model.GameEvent.EventType;
 import Model.GameRecord;
 import World.DBManager;
 import World.GameStateController;
 
 import Implementation.ArrayList;
 
+import javafx.application.Platform;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.Button;
@@ -18,15 +21,13 @@ import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
 
 /**
- * Leaderboard panel (right sidebar).
+ * LeaderboardPanel — 右侧排行榜面板。
  *
- * TOP SCORES  – loaded from MySQL database
- * RANK QUERY  – MaxHeap.topK(rank)
- * RANGE QUERY – AVLTree.rangeQuery(lo, hi)
+ * 重构后通过 GameEvent.Bus 自我刷新，外部无需调用任何方法。
+ * 订阅事件：NODE_COMPLETED（路径完成后刷新榜单）/ PLAYER_LOGGED_IN（重载历史）
  */
 public class LeaderboardPanel extends VBox {
 
-    // ── Colour palette (high-contrast dark theme) ──
     private static final String BG        = "#13131f";
     private static final String BG_CARD   = "#1e1e30";
     private static final String BG_HEADER = "#252540";
@@ -58,23 +59,21 @@ public class LeaderboardPanel extends VBox {
 
         setPrefWidth(220);
         setSpacing(0);
-        setStyle("-fx-background-color: " + BG + ";"
-                + "-fx-border-color: " + BORDER + ";"
-                + "-fx-border-width: 0 0 0 2;");
+        setStyle("-fx-background-color:" + BG
+                + ";-fx-border-color:" + BORDER
+                + ";-fx-border-width:0 0 0 2;");
 
-        // ── Section 1: Top Scores (from DB) ──
         topListBox = new VBox(4);
         topListBox.setPadding(new Insets(8, 10, 8, 10));
-        topListBox.setStyle("-fx-background-color: " + BG + ";");
+        topListBox.setStyle("-fx-background-color:" + BG + ";");
 
         ScrollPane topScroll = new ScrollPane(topListBox);
         topScroll.setFitToWidth(true);
         topScroll.setPrefViewportHeight(230);
         topScroll.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
         topScroll.setVbarPolicy(ScrollPane.ScrollBarPolicy.AS_NEEDED);
-        topScroll.setStyle("-fx-background: " + BG + "; -fx-background-color: " + BG + ";");
+        topScroll.setStyle("-fx-background:" + BG + ";-fx-background-color:" + BG + ";");
 
-        // ── Section 2: Rank Query ──
         rankField = styledField("Rank  e.g. 3");
         Button rankBtn = styledBtn("Find", CYAN);
         rankBtn.setOnAction(e -> runRankQuery());
@@ -87,7 +86,6 @@ public class LeaderboardPanel extends VBox {
         rankResultLabel.setPadding(new Insets(0, 10, 6, 10));
         rankResultLabel.setWrapText(true);
 
-        // ── Section 3: Range Query ──
         loField = styledField("Min");
         hiField = styledField("Max");
         Button queryBtn = styledBtn("Search", GREEN);
@@ -111,23 +109,33 @@ public class LeaderboardPanel extends VBox {
         rangeScroll.setPrefViewportHeight(150);
         rangeScroll.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
         rangeScroll.setVbarPolicy(ScrollPane.ScrollBarPolicy.AS_NEEDED);
-        rangeScroll.setStyle("-fx-background: " + BG + "; -fx-background-color: " + BG + ";");
+        rangeScroll.setStyle("-fx-background:" + BG + ";-fx-background-color:" + BG + ";");
 
         getChildren().addAll(
-                sectionHeader("TOP SCORES", "DB · ORDER BY score DESC"),
+                sectionHeader("TOP SCORES",  "DB · ORDER BY score DESC"),
                 topScroll,
-                sectionHeader("RANK QUERY", "MaxHeap · topK(rank)"),
+                sectionHeader("RANK QUERY",  "MaxHeap · topK(rank)"),
                 rankRow, rankResultLabel,
                 sectionHeader("RANGE QUERY", "AVLTree · rangeQuery(lo, hi)"),
                 inputRow, btnRow, rangeCountLabel, rangeScroll
         );
 
-        refresh();
+        // 初始加载
+        refreshTopList();
+
+        // ── 订阅事件 ────────────────────────────────────────────────────
+        GameEvent.Bus bus = GameEvent.Bus.get();
+
+        // 路径完成（叶节点）才会有新分数入库，刷新榜单
+        bus.subscribe(EventType.NODE_COMPLETED,
+                e -> Platform.runLater(this::refreshTopList));
+
+        // 用户登录后重新拉取历史分数
+        bus.subscribe(EventType.PLAYER_LOGGED_IN,
+                e -> Platform.runLater(this::refreshTopList));
     }
 
-    public void refresh() { refreshTopList(); }
-
-    // ── Top-10 from database ──
+    // ── Top-10 ───────────────────────────────────────────────────────────
 
     private void refreshTopList() {
         topListBox.getChildren().clear();
@@ -135,7 +143,6 @@ public class LeaderboardPanel extends VBox {
         ArrayList<DBManager.ScoreRecord> rows = db.loadTopScores(10);
 
         if (rows.isEmpty()) {
-            // Fall back to MaxHeap when DB is offline
             ArrayList<Integer> top = gameState.getTopK(10);
             if (top.isEmpty()) {
                 Label empty = new Label("No scores yet.\nFinish a path to appear here!");
@@ -162,20 +169,16 @@ public class LeaderboardPanel extends VBox {
         row.setAlignment(Pos.CENTER_LEFT);
         row.setPadding(new Insets(5, 8, 5, 8));
 
-        String accent;
-        String medal;
+        String accent, medal;
         if      (rank == 1) { medal = "🥇"; accent = GOLD;   }
         else if (rank == 2) { medal = "🥈"; accent = SILVER; }
         else if (rank == 3) { medal = "🥉"; accent = BRONZE; }
         else                { medal = "";   accent = DIM;    }
 
-        String rowBg   = rank <= 3 ? "#252540" : BG_CARD;
-        String leftBar = rank <= 3 ? accent    : BORDER;
-        row.setStyle("-fx-background-color: " + rowBg + ";"
-                + "-fx-background-radius: 5;"
-                + "-fx-border-color: " + leftBar + ";"
-                + "-fx-border-width: 0 0 0 3;"
-                + "-fx-border-radius: 0 5 5 0;");
+        row.setStyle("-fx-background-color:" + (rank <= 3 ? "#252540" : BG_CARD) + ";"
+                + "-fx-background-radius:5;"
+                + "-fx-border-color:" + (rank <= 3 ? accent : BORDER) + ";"
+                + "-fx-border-width:0 0 0 3;-fx-border-radius:0 5 5 0;");
 
         Label numLbl = new Label(rank <= 3 ? medal : String.format("%2d.", rank));
         numLbl.setFont(Font.font("Arial", FontWeight.BOLD, rank <= 3 ? 15 : 12));
@@ -198,7 +201,7 @@ public class LeaderboardPanel extends VBox {
         return row;
     }
 
-    // ── Rank query (MaxHeap) ──
+    // ── Rank query ───────────────────────────────────────────────────────
 
     private void runRankQuery() {
         rankResultLabel.setText("");
@@ -217,12 +220,12 @@ public class LeaderboardPanel extends VBox {
             rankResultLabel.setText("Only " + top.size() + " score(s) so far.");
             rankResultLabel.setTextFill(Color.web(DIM)); return;
         }
-        int score = top.get(rank - 1);
-        rankResultLabel.setText("Rank #" + rank + "  →  " + String.format("%,d pts", score));
+        int s = top.get(rank - 1);
+        rankResultLabel.setText("Rank #" + rank + "  →  " + String.format("%,d pts", s));
         rankResultLabel.setTextFill(Color.web(GOLD));
     }
 
-    // ── Range query (AVLTree) ──
+    // ── Range query ──────────────────────────────────────────────────────
 
     private void runRangeQuery() {
         rangeResultBox.getChildren().clear();
@@ -244,7 +247,7 @@ public class LeaderboardPanel extends VBox {
             rangeCountLabel.setText("No records in [" + lo + ", " + hi + "]");
             rangeCountLabel.setTextFill(Color.web(DIM)); return;
         }
-        rangeCountLabel.setText("Found " + results.size() + " record(s)  ["+ lo +", "+ hi +"]");
+        rangeCountLabel.setText("Found " + results.size() + " record(s)  [" + lo + ", " + hi + "]");
         rangeCountLabel.setTextFill(Color.web(GREEN));
         for (GameRecord rec : results) rangeResultBox.getChildren().add(buildRangeRow(rec));
     }
@@ -253,7 +256,7 @@ public class LeaderboardPanel extends VBox {
         HBox row = new HBox(8);
         row.setAlignment(Pos.CENTER_LEFT);
         row.setPadding(new Insets(4, 8, 4, 8));
-        row.setStyle("-fx-background-color: " + BG_CARD + "; -fx-background-radius: 4;");
+        row.setStyle("-fx-background-color:" + BG_CARD + ";-fx-background-radius:4;");
 
         Label nameLbl = new Label(rec.getPlayerName());
         nameLbl.setFont(Font.font("Arial", 12));
@@ -275,23 +278,19 @@ public class LeaderboardPanel extends VBox {
         return row;
     }
 
-    // ── UI helpers ──
+    // ── UI helpers ───────────────────────────────────────────────────────
 
     private VBox sectionHeader(String title, String subtitle) {
         VBox header = new VBox(2);
         header.setPadding(new Insets(8, 12, 6, 12));
-        header.setStyle("-fx-background-color: " + BG_HEADER + ";"
-                + "-fx-border-color: " + BORDER + ";"
-                + "-fx-border-width: 0 0 1 0;");
-
+        header.setStyle("-fx-background-color:" + BG_HEADER
+                + ";-fx-border-color:" + BORDER + ";-fx-border-width:0 0 1 0;");
         Label t = new Label(title);
         t.setFont(Font.font("Arial", FontWeight.BOLD, 13));
         t.setTextFill(Color.web(CYAN));
-
         Label s = new Label(subtitle);
         s.setFont(Font.font("Arial", 10));
         s.setTextFill(Color.web(DIM));
-
         header.getChildren().addAll(t, s);
         return header;
     }
@@ -299,15 +298,13 @@ public class LeaderboardPanel extends VBox {
     private TextField styledField(String prompt) {
         TextField tf = new TextField();
         tf.setPromptText(prompt);
-        tf.setPrefWidth(82);
-        tf.setPrefHeight(28);
+        tf.setPrefWidth(82); tf.setPrefHeight(28);
         tf.setFont(Font.font("Arial", 12));
-        tf.setStyle("-fx-background-color: " + BG_CARD + ";"
-                + "-fx-text-fill: " + TEXT + ";"
-                + "-fx-prompt-text-fill: " + DIM + ";"
-                + "-fx-border-color: " + BORDER + ";"
-                + "-fx-border-width: 1; -fx-border-radius: 4;"
-                + "-fx-background-radius: 4;");
+        tf.setStyle("-fx-background-color:" + BG_CARD
+                + ";-fx-text-fill:" + TEXT
+                + ";-fx-prompt-text-fill:" + DIM
+                + ";-fx-border-color:" + BORDER
+                + ";-fx-border-width:1;-fx-border-radius:4;-fx-background-radius:4;");
         return tf;
     }
 
@@ -316,15 +313,13 @@ public class LeaderboardPanel extends VBox {
         btn.setFont(Font.font("Arial", FontWeight.BOLD, 12));
         btn.setTextFill(Color.web(col));
         btn.setPrefHeight(28);
-        String normal = "-fx-background-color:" + BG_CARD
-                + ";-fx-border-color:" + col
+        String n = "-fx-background-color:" + BG_CARD + ";-fx-border-color:" + col
                 + ";-fx-border-width:1;-fx-background-radius:4;-fx-border-radius:4;-fx-cursor:hand;";
-        String hover  = "-fx-background-color:" + col
-                + ";-fx-border-color:" + col
+        String h = "-fx-background-color:" + col + ";-fx-border-color:" + col
                 + ";-fx-border-width:1;-fx-background-radius:4;-fx-border-radius:4;-fx-cursor:hand;";
-        btn.setStyle(normal);
-        btn.setOnMouseEntered(e -> { btn.setStyle(hover);  btn.setTextFill(Color.web("#13131f")); });
-        btn.setOnMouseExited (e -> { btn.setStyle(normal); btn.setTextFill(Color.web(col));       });
+        btn.setStyle(n);
+        btn.setOnMouseEntered(e -> { btn.setStyle(h); btn.setTextFill(Color.web("#13131f")); });
+        btn.setOnMouseExited (e -> { btn.setStyle(n); btn.setTextFill(Color.web(col));       });
         return btn;
     }
 }
