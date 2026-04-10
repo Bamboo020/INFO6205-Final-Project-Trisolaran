@@ -130,10 +130,7 @@ public class GameStateController {
         scoreHistory.put(score, record);
     }
 
-    public void recordScore(int score) {
-        int levelId = (currentNode != null) ? currentNode.getLevelId() : 0;
-        recordScore(score, new GameRecord("Player", score, levelId, 0L));
-    }
+
 
     public ArrayList<Integer>    getTopK(int k)               { return leaderboard.topK(k);              }
     public ArrayList<GameRecord> getScoreRange(int lo, int hi) { return scoreHistory.rangeQuery(lo, hi); }
@@ -146,5 +143,4 @@ public class GameStateController {
     public int     getAccumulatedScore() { return accumulatedScore; }
     public int     getLastPathScore()    { return lastPathScore;    }
     public int     getLives()            { return lives;            }
-    public boolean isPathActive()        { return pathActive;       }
 }

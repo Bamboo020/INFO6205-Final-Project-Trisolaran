@@ -20,11 +20,6 @@ public class MaxHeap<T extends Comparable<T>> {
         size = 0;
     }
 
-    public MaxHeap(int initialCapacity) {
-        heap = new Object[Math.max(initialCapacity, DEFAULT_CAPACITY) + 1];
-        size = 0;
-    }
-
     /** Inserts an item. O(log n) */
     public void insert(T item) {
         if (item == null) throw new IllegalArgumentException("Null items not allowed");
@@ -44,11 +39,6 @@ public class MaxHeap<T extends Comparable<T>> {
     }
 
     /** Returns the maximum element without removing it. O(1) */
-    public T peekMax() {
-        if (isEmpty()) throw new java.util.NoSuchElementException("Heap is empty");
-        return (T) heap[1];
-    }
-
     /**
      * Returns a snapshot list of the top-{@code k} elements in descending order.
      * Heap state is fully restored after the call. O(k log n)
