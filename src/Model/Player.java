@@ -18,10 +18,6 @@ import Implementation.LinkedStack;
  */
 public class Player {
 
-    // ── 移动历史（Undo 用）──────────────────────────────────────────────
-    private final LinkedStack<int[]> moveHistory;
-    private int moveCount;
-
     // ── 道具背包 ────────────────────────────────────────────────────────
     private final ArrayList<Item> inventory;
 
@@ -38,26 +34,9 @@ public class Player {
     // ── 构造 ─────────────────────────────────────────────────────────────
 
     public Player() {
-        this.moveHistory     = new LinkedStack<>();
         this.inventory       = new ArrayList<>();
-        this.moveCount       = 0;
         this.speedBoostTicks = 0;
         this.wallPassActive  = false;
-    }
-
-    // ── 移动历史 ─────────────────────────────────────────────────────────
-
-    public void recordMove(int fromRow, int fromCol) {
-        moveHistory.push(new int[]{fromRow, fromCol});
-        moveCount++;
-    }
-
-    public boolean undoMove() {
-        return !moveHistory.isEmpty() && moveHistory.pop() != null;
-    }
-
-    public int[] peekLastPosition() {
-        return moveHistory.isEmpty() ? null : moveHistory.peek();
     }
 
     // ── 背包：拾取 ──────────────────────────────────────────────────────
@@ -143,12 +122,5 @@ public class Player {
         inventory.clear();
         speedBoostTicks = 0;
         wallPassActive  = false;
-        moveCount       = 0;
-        while (!moveHistory.isEmpty()) moveHistory.pop();
     }
-
-    // ── Getters ──────────────────────────────────────────────────────────
-
-    public int getMoveCount()                    { return moveCount;    }
-    public LinkedStack<int[]> getMoveHistory()   { return moveHistory;  }
 }
