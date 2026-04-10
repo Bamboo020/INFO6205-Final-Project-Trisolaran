@@ -1,5 +1,7 @@
 package World;
 
+import Implementation.HashMap;
+
 /**
  * Handles user authentication by delegating to DBManager.
  * Falls back to in-memory mode if the database is unavailable.
@@ -15,7 +17,7 @@ public class AuthController {
     private       boolean   dbAvailable = false;
 
     // Fallback in-memory store (used when DB is offline)
-    private final Implementation.HashMap<String> memUsers = new Implementation.HashMap<>();
+    private final HashMap<String> memUsers = new HashMap<>();
 
     // ------------------------------------------------------------------ //
     //  Constructor

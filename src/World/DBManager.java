@@ -24,7 +24,7 @@ public class DBManager {
             + "?useSSL=false&serverTimezone=UTC"
             + "&allowPublicKeyRetrieval=true";
     private static final String DB_USER = "root";
-    private static final String DB_PASS = "20030816";   // ← change this
+    private static final String DB_PASS = "123456Wzh";   // ← change this
 
     // ------------------------------------------------------------------ //
     //  Singleton connection
